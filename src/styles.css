@@ -362,3 +362,173 @@ h2 {
     animation-iteration-count: 1 !important;
   }
 }
+
+.learning-path,
+.lesson-screen {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 1rem;
+}
+
+.lesson-list {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.path-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.85rem;
+  width: 100%;
+  min-height: 5rem;
+  padding: 0.9rem;
+  border: 1px solid #ececff;
+  border-radius: 20px;
+  background: #ffffff;
+  color: #272c5f;
+  text-align: left;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.path-card:not(:disabled):hover,
+.path-card:not(:disabled):focus-visible {
+  border-color: rgba(109, 93, 252, 0.35);
+  box-shadow: 0 16px 30px rgba(59, 54, 138, 0.12);
+  transform: translateY(-2px);
+}
+
+.path-card:disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
+}
+
+.path-card.completed {
+  border-color: rgba(32, 199, 185, 0.36);
+  background: #f0fffc;
+}
+
+.path-card.locked {
+  background: #f7f7fc;
+}
+
+.path-step {
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  place-items: center;
+  border-radius: 14px;
+  background: #f0efff;
+  color: #5d50e6;
+  font-weight: 900;
+}
+
+.path-copy {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.path-copy strong {
+  font-size: 1rem;
+}
+
+.path-copy small,
+.path-status {
+  color: #6f7393;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.path-status {
+  justify-self: end;
+  border-radius: 999px;
+  background: #f0efff;
+  color: #5d50e6;
+  padding: 0.45rem 0.65rem;
+  white-space: nowrap;
+}
+
+.back-button {
+  justify-self: start;
+  min-height: 2.7rem;
+  border: 1px solid rgba(109, 93, 252, 0.18);
+  border-radius: 999px;
+  background: #ffffff;
+  color: #5d50e6;
+  font-weight: 900;
+  padding: 0 1rem;
+}
+
+.code-example,
+.mini-task,
+.quiz-card,
+.hint-card {
+  border: 1px solid #ececff;
+  border-radius: 20px;
+  background: #ffffff;
+  padding: 1rem;
+}
+
+.code-example strong,
+.mini-task strong {
+  display: inline-block;
+  margin-bottom: 0.5rem;
+  color: #272c5f;
+}
+
+.code-example pre {
+  overflow-x: auto;
+  margin: 0;
+  border-radius: 16px;
+  background: #20244f;
+  color: #f8f7ff;
+  padding: 1rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.code-example code {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  white-space: pre;
+}
+
+.mini-task p,
+.quiz-card p,
+.hint-card p {
+  margin-bottom: 0;
+}
+
+.quiz-card summary,
+.hint-card summary {
+  color: #272c5f;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.quiz-card ul {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0.85rem 0;
+  padding-left: 1.25rem;
+}
+
+.correct-answer {
+  color: #138f82;
+  font-weight: 900;
+}
+
+@media (max-width: 560px) {
+  .path-card {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .path-status {
+    grid-column: 2;
+    justify-self: start;
+  }
+}
