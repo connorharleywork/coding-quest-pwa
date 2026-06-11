@@ -1,5 +1,7 @@
 // Milestone 2 still uses local sample data so the app works fully offline.
 // Later milestones can replace this file with real lesson content.
+// Milestone 1 uses simple sample data so the app feels alive without a backend.
+// Future lessons can replace this file with data from a local database or API.
 export const todaysLesson = {
   id: 'lesson-html-buttons',
   title: 'Make your first button',
@@ -12,6 +14,7 @@ export const todaysLesson = {
 
 export const dailyChecklist = [
   { id: 'open-app', label: 'Open CodeQuest', xp: 5, automatic: true },
+  { id: 'open-app', label: 'Open CodeQuest', xp: 5 },
   { id: 'read-lesson', label: 'Read today\'s mini lesson', xp: 10 },
   { id: 'solve-challenge', label: 'Solve one practice challenge', xp: 20 },
   { id: 'reflect', label: 'Write one thing you learned', xp: 5 },

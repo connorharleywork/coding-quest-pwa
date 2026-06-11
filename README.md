@@ -15,6 +15,17 @@ CodeQuest is a beginner-friendly, gamified coding tutor built as a local-first P
 - A Profile screen with total XP, level, streak, completed lessons, badges earned, and daily goal progress.
 - Basic PWA manifest, SVG app icon, and production service worker shell cache.
 - Sample data only; no backend, paid APIs, or full course system yet.
+CodeQuest is a beginner-friendly, gamified coding tutor built as a local-first Progressive Web App. Milestone 1 focuses on the home dashboard experience only: sample learning data, local progress storage, and an app-like mobile-first UI.
+
+## What is included in milestone 1
+
+- React + Vite project setup.
+- Mobile-first dashboard for iPhone-sized screens that also scales nicely on Mac.
+- App name, today's lesson card, XP total, level, streak, daily checklist, and continue learning button.
+- Bottom navigation placeholders for Home, Learn, Practice, Projects, and Profile.
+- `localStorage` persistence for XP, streak, completed lessons, and checklist progress.
+- Basic PWA manifest, SVG app icon, and production service worker shell cache.
+- Sample data only; no backend or full course system yet.
 
 ## Setup instructions
 
@@ -77,12 +88,16 @@ CodeQuest is a beginner-friendly, gamified coding tutor built as a local-first P
 │   ├── hooks/useLocalStorage.js # Reusable localStorage persistence hook
 │   ├── lib/progress.js         # Local XP, level, streak, daily goal, and badge logic
 │   ├── App.jsx                 # Dashboard, profile, and progress UI behavior
+│   ├── data/sampleData.js      # Temporary lesson, checklist, and nav sample data
+│   ├── hooks/useLocalStorage.js # Reusable localStorage persistence hook
+│   ├── App.jsx                 # Milestone 1 dashboard UI and progress behavior
 │   ├── main.jsx                # React app entry point and service worker registration
 │   └── styles.css              # Mobile-first app styling
 ├── .gitignore                  # Keeps dependencies, builds, and local files out of git
 ├── index.html                  # Vite HTML entry file
 ├── package.json                # NPM scripts and dependencies
 └── vite.config.js              # Vite JSX runtime configuration
+└── package.json                # NPM scripts and dependencies
 ```
 
 ## Suggested next improvements
@@ -92,3 +107,8 @@ CodeQuest is a beginner-friendly, gamified coding tutor built as a local-first P
 - Store richer lesson content in IndexedDB for a stronger offline learning experience.
 - Add optional celebration animations and sounds for badges, with reduced-motion and mute controls.
 - Add an export/import progress option so local-first learners can back up their progress.
+- Add real navigation screens for Learn, Practice, Projects, and Profile.
+- Move progress rules into a dedicated quest engine so XP and streak logic are easier to test.
+- Add lesson content stored in IndexedDB for richer offline learning.
+- Include animations and sound effects for completing quests, with reduced-motion support.
+- Add unit tests for localStorage persistence and XP calculations.
