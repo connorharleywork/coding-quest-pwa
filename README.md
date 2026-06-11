@@ -67,6 +67,8 @@ CodeQuest is a beginner-friendly, gamified coding tutor built as a local-first P
 │   └── styles.css              # Mobile-first app styling
 ├── .gitignore                  # Keeps dependencies, builds, and local files out of git
 ├── index.html                  # Vite HTML entry file
+├── package.json                # NPM scripts and dependencies
+└── vite.config.js              # Vite JSX runtime configuration
 └── package.json                # NPM scripts and dependencies
 ```
 

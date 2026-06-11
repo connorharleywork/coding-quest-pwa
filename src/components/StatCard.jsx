@@ -1,3 +1,4 @@
+import React from 'react';
 // A small display card used for XP, level, and streak stats.
 export function StatCard({ label, value, helper }) {
   return (

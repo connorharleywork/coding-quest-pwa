@@ -1,3 +1,4 @@
+import React from 'react';
 import { BottomNav } from './components/BottomNav.jsx';
 import { StatCard } from './components/StatCard.jsx';
 import { dailyChecklist, todaysLesson } from './data/sampleData.js';

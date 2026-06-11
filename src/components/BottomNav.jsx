@@ -1,3 +1,4 @@
+import React from 'react';
 import { navItems } from '../data/sampleData.js';
 
 // The bottom nav is a visual placeholder in milestone 1.
