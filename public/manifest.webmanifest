@@ -1,0 +1,18 @@
+{
+  "name": "CodeQuest",
+  "short_name": "CodeQuest",
+  "description": "A beginner-friendly gamified coding tutor.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f7ff",
+  "theme_color": "#6d5dfc",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

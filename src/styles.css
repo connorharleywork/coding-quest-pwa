@@ -1,0 +1,494 @@
+:root {
+  color: #1d2143;
+  background: #eef0ff;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background:
+    radial-gradient(circle at top left, rgba(255, 230, 109, 0.45), transparent 32rem),
+    linear-gradient(160deg, #f8f7ff 0%, #eef0ff 52%, #e7fbff 100%);
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.app-shell {
+  width: min(100%, 980px);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 1rem 1rem calc(6.5rem + env(safe-area-inset-bottom));
+}
+
+.dashboard {
+  display: grid;
+  gap: 1rem;
+}
+
+.hero-card,
+.lesson-card,
+.checklist-card,
+.stat-card {
+  border: 1px solid rgba(109, 93, 252, 0.12);
+  border-radius: 28px;
+  box-shadow: 0 20px 50px rgba(59, 54, 138, 0.12);
+}
+
+.hero-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  overflow: hidden;
+  padding: 1.35rem;
+  color: white;
+  background:
+    linear-gradient(135deg, rgba(109, 93, 252, 0.96), rgba(133, 91, 255, 0.86)),
+    radial-gradient(circle at 90% 10%, rgba(255, 230, 109, 0.9), transparent 11rem);
+}
+
+.eyebrow {
+  margin: 0 0 0.4rem;
+  color: inherit;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.76;
+}
+
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 0.55rem;
+  font-size: clamp(2.35rem, 12vw, 5rem);
+  line-height: 0.9;
+  letter-spacing: -0.08em;
+}
+
+h2 {
+  margin-bottom: 0.55rem;
+  font-size: 1.3rem;
+  letter-spacing: -0.04em;
+}
+
+.hero-copy {
+  max-width: 30rem;
+  margin-bottom: 0;
+  color: rgba(255, 255, 255, 0.84);
+  font-size: 0.98rem;
+}
+
+.hero-badge {
+  display: grid;
+  flex: 0 0 auto;
+  width: 5.4rem;
+  height: 5.4rem;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.36);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(12px);
+}
+
+.hero-badge span {
+  align-self: end;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hero-badge strong {
+  align-self: start;
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.stat-card,
+.lesson-card,
+.checklist-card {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(18px);
+}
+
+.stat-card {
+  display: grid;
+  gap: 0.25rem;
+  min-height: 7.25rem;
+  padding: 1rem;
+}
+
+.stat-card span,
+.stat-card small,
+.lesson-card p,
+.checklist-item small {
+  color: #6f7393;
+}
+
+.stat-card span,
+.stat-card small {
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.stat-card strong {
+  align-self: end;
+  color: #272c5f;
+  font-size: clamp(1.35rem, 6vw, 2.4rem);
+  line-height: 1;
+  letter-spacing: -0.06em;
+}
+
+.lesson-card,
+.checklist-card {
+  padding: 1.15rem;
+}
+
+.section-heading,
+.lesson-meta,
+.checklist-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.section-heading > span,
+.section-heading > strong,
+.lesson-meta span {
+  border-radius: 999px;
+  background: #f0efff;
+  color: #5d50e6;
+  font-size: 0.8rem;
+  font-weight: 800;
+  padding: 0.45rem 0.7rem;
+}
+
+.lesson-card p {
+  line-height: 1.55;
+}
+
+.lesson-meta {
+  margin: 1rem 0;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.progress-track {
+  height: 0.85rem;
+  margin-bottom: 1rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e8e9f7;
+}
+
+.progress-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #6d5dfc, #20d6c7);
+  transition: width 220ms ease;
+}
+
+.primary-button {
+  width: 100%;
+  min-height: 3.4rem;
+  border: 0;
+  border-radius: 18px;
+  color: white;
+  background: linear-gradient(135deg, #6d5dfc, #20c7b9);
+  box-shadow: 0 16px 28px rgba(109, 93, 252, 0.24);
+  font-weight: 900;
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.primary-button:hover,
+.primary-button:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 34px rgba(109, 93, 252, 0.32);
+}
+
+.checklist-items {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.checklist-item {
+  min-height: 3.6rem;
+  padding: 0.85rem;
+  border: 1px solid #ececff;
+  border-radius: 18px;
+  background: #ffffff;
+}
+
+.checklist-item input {
+  width: 1.25rem;
+  height: 1.25rem;
+  accent-color: #6d5dfc;
+}
+
+.checklist-item span {
+  flex: 1;
+  font-weight: 800;
+}
+
+.celebration {
+  margin: 1rem 0 0;
+  border-radius: 18px;
+  background: #fff8d8;
+  color: #6b5700;
+  font-weight: 800;
+  padding: 0.9rem;
+}
+
+.bottom-nav {
+  position: fixed;
+  right: 0.75rem;
+  bottom: calc(0.75rem + env(safe-area-inset-bottom));
+  left: 0.75rem;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.25rem;
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 0.45rem;
+  border: 1px solid rgba(109, 93, 252, 0.16);
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 18px 44px rgba(45, 48, 97, 0.18);
+  backdrop-filter: blur(18px);
+}
+
+.bottom-nav button {
+  display: grid;
+  gap: 0.2rem;
+  min-height: 3.9rem;
+  place-items: center;
+  border: 0;
+  border-radius: 20px;
+  color: #727690;
+  background: transparent;
+  font-size: 0.68rem;
+  font-weight: 850;
+}
+
+.bottom-nav button span {
+  font-size: 1.2rem;
+}
+
+.bottom-nav button.active {
+  color: #5d50e6;
+  background: #f0efff;
+}
+
+@media (min-width: 720px) {
+  .app-shell {
+    padding: 2rem 2rem calc(7rem + env(safe-area-inset-bottom));
+  }
+
+  .dashboard {
+    grid-template-columns: 1.1fr 0.9fr;
+    align-items: start;
+  }
+
+  .hero-card,
+  .stats-grid {
+    grid-column: 1 / -1;
+  }
+
+  .hero-card,
+  .lesson-card,
+  .checklist-card {
+    padding: 1.5rem;
+  }
+}
+
+@media (max-width: 430px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-card {
+    min-height: auto;
+  }
+
+  .hero-card {
+    align-items: flex-start;
+  }
+
+  .hero-badge {
+    width: 4.7rem;
+    height: 4.7rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+.goal-card,
+.profile-card,
+.placeholder-card {
+  padding: 1.15rem;
+  border: 1px solid rgba(109, 93, 252, 0.12);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 20px 50px rgba(59, 54, 138, 0.12);
+  backdrop-filter: blur(18px);
+}
+
+.goal-copy,
+.empty-state,
+.placeholder-card p {
+  color: #6f7393;
+  line-height: 1.55;
+}
+
+.xp-feedback {
+  margin: 0;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(32, 214, 199, 0.26);
+  border-radius: 20px;
+  color: #176d65;
+  background: rgba(229, 255, 252, 0.92);
+  box-shadow: 0 14px 28px rgba(32, 214, 199, 0.16);
+  font-weight: 900;
+  animation: feedback-pop 260ms ease both;
+}
+
+.primary-button:disabled {
+  cursor: default;
+  opacity: 0.74;
+  transform: none;
+  box-shadow: none;
+}
+
+.checklist-item.complete {
+  border-color: rgba(32, 214, 199, 0.28);
+  background: #f3fffd;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.profile-section {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.section-heading.compact h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.section-heading.compact span {
+  border-radius: 999px;
+  background: #f0efff;
+  color: #5d50e6;
+  font-size: 0.8rem;
+  font-weight: 800;
+  padding: 0.45rem 0.7rem;
+}
+
+.badge-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.badge-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem;
+  border: 1px solid #ececff;
+  border-radius: 18px;
+  background: #ffffff;
+}
+
+.badge-pill > span {
+  display: grid;
+  width: 2.7rem;
+  height: 2.7rem;
+  place-items: center;
+  border-radius: 16px;
+  background: #fff8d8;
+  font-size: 1.35rem;
+}
+
+.badge-pill div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.badge-pill small {
+  color: #6f7393;
+  line-height: 1.35;
+}
+
+@keyframes feedback-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (min-width: 720px) {
+  .goal-card,
+  .profile-card,
+  .placeholder-card {
+    padding: 1.5rem;
+  }
+}
+
+@media (max-width: 430px) {
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
+}
