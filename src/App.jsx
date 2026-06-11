@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { BottomNav } from './components/BottomNav.jsx';
 import { StatCard } from './components/StatCard.jsx';
-import { dailyChecklist, todaysLesson } from './data/sampleData.js';
+import { beginnerLessons } from './data/lessons.js';
+import { dailyChecklist } from './data/sampleData.js';
 import {
   DAILY_GOAL_COUNT,
   completeChecklistItem,
@@ -18,14 +19,17 @@ const readLessonChecklistItem = dailyChecklist.find((item) => item.id === 'read-
 function App() {
   const [progress, setProgress] = useState(loadProgress);
   const [activeNavItem, setActiveNavItem] = useState('home');
+  const [selectedLessonId, setSelectedLessonId] = useState(null);
   const [xpFeedback, setXpFeedback] = useState('');
 
   const level = getLevelFromXp(progress.totalXp);
   const completedChecklistCount = getCompletedChecklistCount(progress, dailyChecklist);
   const checklistIsComplete = completedChecklistCount === dailyChecklist.length;
   const dailyGoalIsComplete = completedChecklistCount >= DAILY_GOAL_COUNT;
-  const lessonIsComplete = progress.completedLessons.includes(todaysLesson.id);
-  const badges = useMemo(() => getEarnedBadges(progress, dailyGoalIsComplete), [dailyGoalIsComplete, progress]);
+  const completedBeginnerLessonsCount = beginnerLessons.filter((lesson) => progress.completedLessons.includes(lesson.id)).length;
+  const nextLesson = getFirstUnlockedIncompleteLesson(progress.completedLessons);
+  const selectedLesson = selectedLessonId ? beginnerLessons.find((lesson) => lesson.id === selectedLessonId) : null;
+  const badges = useMemo(() => getEarnedBadges(progress, dailyGoalIsComplete, completedBeginnerLessonsCount), [dailyGoalIsComplete, progress, completedBeginnerLessonsCount]);
 
   useEffect(() => {
     saveProgress(progress);
@@ -74,18 +78,35 @@ function App() {
     setXpFeedback(`${item.label} unchecked. XP already earned today stays saved.`);
   }
 
-  function continueLearning() {
-    // This button simulates completing today's lesson locally until real lessons exist.
-    if (lessonIsComplete) {
-      setXpFeedback('Today\'s lesson is already complete. Great work!');
+  function openLesson(lesson) {
+    if (!isLessonUnlocked(lesson.id, progress.completedLessons)) {
+      setXpFeedback('That lesson is locked for now. Finish the lesson before it to unlock it!');
+      return;
+    }
+
+    setSelectedLessonId(lesson.id);
+    setActiveNavItem('learn');
+  }
+
+  function openTodaysLesson() {
+    if (nextLesson) openLesson(nextLesson);
+  }
+
+  function completeLesson(lesson) {
+    if (progress.completedLessons.includes(lesson.id)) {
+      setXpFeedback(`${lesson.title} is already complete. Your XP is safely saved!`);
       return;
     }
 
     setProgress((currentProgress) => {
+      if (currentProgress.completedLessons.includes(lesson.id)) {
+        return currentProgress;
+      }
+
       const lessonProgress = {
         ...currentProgress,
-        totalXp: currentProgress.totalXp + todaysLesson.xpReward,
-        completedLessons: [...new Set([...currentProgress.completedLessons, todaysLesson.id])],
+        totalXp: currentProgress.totalXp + lesson.xpReward,
+        completedLessons: [...currentProgress.completedLessons, lesson.id],
       };
       const result = readLessonChecklistItem
         ? completeChecklistItem(lessonProgress, readLessonChecklistItem, dailyChecklist)
@@ -93,7 +114,7 @@ function App() {
       const checklistXp = result.xpEarned > 0 ? ` +${result.xpEarned} checklist XP.` : '';
       const goalMessage = result.goalCompletedNow ? ' Daily goal complete — streak updated!' : '';
 
-      setXpFeedback(`Lesson complete! +${todaysLesson.xpReward} XP.${checklistXp}${goalMessage}`);
+      setXpFeedback(`Great questing! ${lesson.title} complete. +${lesson.xpReward} XP.${checklistXp}${goalMessage}`);
       return result.progress;
     });
   }
@@ -106,6 +127,13 @@ function App() {
   function completeReflection() {
     const reflectionItem = dailyChecklist.find((item) => item.id === 'reflect');
     if (reflectionItem) completeItem(reflectionItem, 'Reflection saved!');
+  }
+
+  function selectNavItem(navItem) {
+    setActiveNavItem(navItem);
+    if (navItem !== 'learn') {
+      setSelectedLessonId(null);
+    }
   }
 
   return (
@@ -133,12 +161,16 @@ function App() {
 
         {activeNavItem === 'home' && (
           <>
-            {renderLessonCard({ lessonIsComplete, continueLearning })}
+            <HomeLessonCard nextLesson={nextLesson} onOpenLesson={openTodaysLesson} />
             {renderChecklistCard({ checklistIsComplete, completedChecklistCount, toggleChecklistItem, progress, dailyGoalIsComplete })}
           </>
         )}
 
-        {activeNavItem === 'learn' && renderLessonCard({ lessonIsComplete, continueLearning })}
+        {activeNavItem === 'learn' && (
+          selectedLesson
+            ? <LessonScreen lesson={selectedLesson} completedLessonIds={progress.completedLessons} onBack={() => setSelectedLessonId(null)} onComplete={completeLesson} />
+            : <LearningPath completedLessonIds={progress.completedLessons} onOpenLesson={openLesson} />
+        )}
 
         {activeNavItem === 'practice' && (
           <section className="lesson-card" aria-labelledby="practice-title">
@@ -181,7 +213,7 @@ function App() {
               <ProfileRow label="Total XP" value={progress.totalXp.toLocaleString()} />
               <ProfileRow label="Level" value={level} />
               <ProfileRow label="Streak" value={`${progress.streak} days`} />
-              <ProfileRow label="Completed lessons" value={progress.completedLessons.length} />
+              <ProfileRow label="Completed lessons" value={`${completedBeginnerLessonsCount}/${beginnerLessons.length}`} />
               <ProfileRow label="Badges earned" value={badges.length ? badges.join(', ') : 'None yet'} />
               <ProfileRow label="Today’s checklist" value={`${completedChecklistCount}/${dailyChecklist.length} done`} />
             </div>
@@ -189,31 +221,134 @@ function App() {
         )}
       </main>
 
-      <BottomNav activeItem={activeNavItem} onSelect={setActiveNavItem} />
+      <BottomNav activeItem={activeNavItem} onSelect={selectNavItem} />
     </div>
   );
 }
 
-function renderLessonCard({ lessonIsComplete, continueLearning }) {
+function HomeLessonCard({ nextLesson, onOpenLesson }) {
+  if (!nextLesson) {
+    return (
+      <section className="lesson-card" aria-labelledby="lesson-title">
+        <div className="section-heading">
+          <p className="eyebrow">Today&apos;s lesson</p>
+          <span>All caught up</span>
+        </div>
+        <h2 id="lesson-title">You finished the beginner path!</h2>
+        <p>Fantastic work. Review any lesson in the Learn tab, or keep your streak alive with today&apos;s checklist.</p>
+      </section>
+    );
+  }
+
   return (
     <section className="lesson-card" aria-labelledby="lesson-title">
       <div className="section-heading">
         <p className="eyebrow">Today&apos;s lesson</p>
-        <span>{todaysLesson.minutes} min</span>
+        <span>{nextLesson.minutes} min</span>
       </div>
-      <h2 id="lesson-title">{todaysLesson.title}</h2>
-      <p>{todaysLesson.goal}</p>
+      <h2 id="lesson-title">{nextLesson.title}</h2>
+      <p>{nextLesson.explanation}</p>
       <div className="lesson-meta">
-        <span>{todaysLesson.language}</span>
-        <span>+{todaysLesson.xpReward} XP</span>
+        {nextLesson.tags.map((tag) => <span key={tag}>{tag}</span>)}
+        <span>+{nextLesson.xpReward} XP</span>
       </div>
-      <div className="progress-track" aria-label={`${lessonIsComplete ? 100 : todaysLesson.progress}% lesson progress`}>
-        <span style={{ width: `${lessonIsComplete ? 100 : todaysLesson.progress}%` }} />
+      <div className="progress-track" aria-label="0% lesson progress">
+        <span style={{ width: '0%' }} />
       </div>
-      <button className="primary-button" type="button" onClick={continueLearning}>
-        {lessonIsComplete ? 'Lesson complete ✓' : 'Continue learning'}
+      <button className="primary-button" type="button" onClick={onOpenLesson}>
+        Start today&apos;s lesson
       </button>
     </section>
+  );
+}
+
+function LearningPath({ completedLessonIds, onOpenLesson }) {
+  return (
+    <section className="lesson-card learning-path" aria-labelledby="learn-title">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">Learn</p>
+          <h2 id="learn-title">Beginner web development path</h2>
+        </div>
+        <span>{completedLessonIds.filter((lessonId) => beginnerLessons.some((lesson) => lesson.id === lessonId)).length}/{beginnerLessons.length}</span>
+      </div>
+      <p>Start with plain-language basics, then unlock each next lesson by finishing the one before it.</p>
+      <div className="lesson-list">
+        {beginnerLessons.map((lesson, index) => {
+          const isCompleted = completedLessonIds.includes(lesson.id);
+          const isUnlocked = isLessonUnlocked(lesson.id, completedLessonIds);
+          const status = isCompleted ? 'completed' : isUnlocked ? 'unlocked' : 'locked';
+
+          return (
+            <button
+              className={`path-card ${status}`}
+              disabled={!isUnlocked}
+              key={lesson.id}
+              onClick={() => onOpenLesson(lesson)}
+              type="button"
+            >
+              <span className="path-step">{index + 1}</span>
+              <span className="path-copy">
+                <strong>{lesson.title}</strong>
+                <small>{lesson.minutes} min • {lesson.tags.join(' • ')} • +{lesson.xpReward} XP</small>
+              </span>
+              <span className="path-status">{getLessonStatusLabel(status)}</span>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function LessonScreen({ lesson, completedLessonIds, onBack, onComplete }) {
+  const isComplete = completedLessonIds.includes(lesson.id);
+
+  return (
+    <article className="lesson-card lesson-screen" aria-labelledby="lesson-screen-title">
+      <button className="back-button" type="button" onClick={onBack}>← Back to path</button>
+      <div className="section-heading">
+        <p className="eyebrow">Lesson</p>
+        <span>{lesson.minutes} min</span>
+      </div>
+      <h2 id="lesson-screen-title">{lesson.title}</h2>
+      <div className="lesson-meta">
+        {lesson.tags.map((tag) => <span key={tag}>{tag}</span>)}
+        <span>+{lesson.xpReward} XP</span>
+      </div>
+      <p>{lesson.explanation}</p>
+
+      {lesson.codeExample && (
+        <div className="code-example">
+          <strong>Example</strong>
+          <pre><code>{lesson.codeExample}</code></pre>
+        </div>
+      )}
+
+      <div className="mini-task">
+        <strong>Mini task</strong>
+        <p>{lesson.miniTask}</p>
+      </div>
+
+      <details className="quiz-card">
+        <summary>{lesson.quiz.question}</summary>
+        <ul>
+          {lesson.quiz.choices.map((choice) => (
+            <li className={choice === lesson.quiz.answer ? 'correct-answer' : undefined} key={choice}>{choice}</li>
+          ))}
+        </ul>
+        <p><strong>Answer:</strong> {lesson.quiz.answer}</p>
+      </details>
+
+      <details className="hint-card">
+        <summary>Need a hint?</summary>
+        <p>{lesson.hint}</p>
+      </details>
+
+      <button className="primary-button" type="button" onClick={() => onComplete(lesson)}>
+        {isComplete ? 'Lesson complete ✓' : `Complete lesson for ${lesson.xpReward} XP`}
+      </button>
+    </article>
   );
 }
 
@@ -256,9 +391,28 @@ function ProfileRow({ label, value }) {
   );
 }
 
-function getEarnedBadges(progress, dailyGoalIsComplete) {
+function getFirstUnlockedIncompleteLesson(completedLessonIds) {
+  return beginnerLessons.find((lesson) => isLessonUnlocked(lesson.id, completedLessonIds) && !completedLessonIds.includes(lesson.id));
+}
+
+function isLessonUnlocked(lessonId, completedLessonIds) {
+  const lessonIndex = beginnerLessons.findIndex((lesson) => lesson.id === lessonId);
+  if (lessonIndex === -1) return false;
+  if (lessonIndex === 0) return true;
+
+  return completedLessonIds.includes(beginnerLessons[lessonIndex - 1].id);
+}
+
+function getLessonStatusLabel(status) {
+  if (status === 'completed') return 'Completed ✓';
+  if (status === 'unlocked') return 'Unlocked';
+  return 'Locked 🔒';
+}
+
+function getEarnedBadges(progress, dailyGoalIsComplete, completedBeginnerLessonsCount) {
   return [
-    progress.completedLessons.length > 0 && 'First Lesson',
+    completedBeginnerLessonsCount > 0 && 'First Lesson',
+    completedBeginnerLessonsCount === beginnerLessons.length && 'Path Explorer',
     progress.totalXp >= 100 && '100 XP Club',
     dailyGoalIsComplete && 'Daily Goal',
     progress.streak >= 3 && 'Streak Starter',
