@@ -532,3 +532,130 @@ h2 {
     justify-self: start;
   }
 }
+
+.playground-card {
+  display: grid;
+  gap: 1rem;
+}
+
+.starter-challenge {
+  border: 1px solid rgba(32, 214, 199, 0.28);
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(32, 214, 199, 0.12), rgba(109, 93, 252, 0.1));
+  padding: 1rem;
+}
+
+.starter-challenge strong,
+.preview-header strong,
+.code-editor span {
+  color: #272c5f;
+  font-weight: 900;
+}
+
+.starter-challenge p {
+  margin: 0.35rem 0 0;
+}
+
+.playground-grid,
+.editor-stack,
+.playground-actions {
+  display: grid;
+  gap: 1rem;
+}
+
+.code-editor {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.code-editor small,
+.preview-header span {
+  color: #6f7393;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.code-editor textarea {
+  width: 100%;
+  min-height: 12rem;
+  resize: vertical;
+  border: 1px solid #dfe1ff;
+  border-radius: 18px;
+  background: #fbfbff;
+  color: #20244f;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  padding: 0.9rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.code-editor textarea:focus {
+  border-color: #6d5dfc;
+  box-shadow: 0 0 0 4px rgba(109, 93, 252, 0.12);
+  outline: none;
+}
+
+.preview-panel {
+  overflow: hidden;
+  border: 1px solid #dfe1ff;
+  border-radius: 22px;
+  background: #ffffff;
+}
+
+.preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid #ececff;
+  background: #fbfbff;
+}
+
+.preview-frame {
+  display: block;
+  width: 100%;
+  min-height: 22rem;
+  border: 0;
+  background: #ffffff;
+}
+
+.playground-hints ul {
+  margin-bottom: 0;
+  padding-left: 1.25rem;
+}
+
+.playground-hints code {
+  border-radius: 0.4rem;
+  background: #f0efff;
+  color: #5d50e6;
+  font-size: 0.85rem;
+  padding: 0.1rem 0.3rem;
+}
+
+.secondary-button {
+  width: 100%;
+  min-height: 3.1rem;
+  border: 1px solid rgba(109, 93, 252, 0.18);
+  border-radius: 18px;
+  background: #ffffff;
+  color: #5d50e6;
+  font-weight: 900;
+}
+
+.danger-button {
+  color: #b42318;
+}
+
+@media (min-width: 760px) {
+  .playground-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(20rem, 0.9fr);
+    align-items: start;
+  }
+
+  .playground-actions {
+    grid-template-columns: 1.2fr 1fr 1fr;
+  }
+}

@@ -5,6 +5,7 @@ const starterProgress = {
   totalXp: 120,
   streak: 0,
   completedLessons: ['lesson-web-basics'],
+  practiceCompletions: 0,
   lastGoalDate: null,
   todayDate: null,
   todayChecklist: {},
@@ -59,6 +60,9 @@ function migrateProgress(savedProgress) {
       : starterProgress.completedLessons,
     todayChecklist: savedProgress.todayChecklist ?? savedProgress.checklist ?? starterProgress.todayChecklist,
     todayAwardedChecklist: savedProgress.todayAwardedChecklist ?? {},
+    practiceCompletions: Number.isFinite(savedProgress.practiceCompletions)
+      ? savedProgress.practiceCompletions
+      : starterProgress.practiceCompletions,
   };
 }
 

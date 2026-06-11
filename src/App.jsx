@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { BottomNav } from './components/BottomNav.jsx';
 import { StatCard } from './components/StatCard.jsx';
+import { useLocalStorage } from './hooks/useLocalStorage.js';
 import { beginnerLessons } from './data/lessons.js';
 import { dailyChecklist } from './data/sampleData.js';
 import {
@@ -15,12 +16,49 @@ import {
 
 const openAppChecklistItem = dailyChecklist.find((item) => item.id === 'open-app');
 const readLessonChecklistItem = dailyChecklist.find((item) => item.id === 'read-lesson');
+const practiceChecklistItem = dailyChecklist.find((item) => item.id === 'solve-challenge');
+const PLAYGROUND_STORAGE_KEY = 'codequest-playground-code';
+const starterPlaygroundCode = {
+  html: `<section class="mini-page">
+  <h1>Hello, CodeQuest!</h1>
+  <p>HTML adds the words and parts you see on a web page.</p>
+  <button id="quest-button">Click me</button>
+  <p id="message" aria-live="polite"></p>
+</section>`,
+  css: `.mini-page {
+  font-family: Arial, sans-serif;
+  text-align: center;
+  padding: 24px;
+  color: #272c5f;
+}
+
+button {
+  border: 0;
+  border-radius: 14px;
+  padding: 12px 18px;
+  color: white;
+  background: #6d5dfc;
+  font-weight: bold;
+}
+
+#message {
+  color: #0f8f84;
+  font-weight: bold;
+}`,
+  js: `const button = document.querySelector('#quest-button');
+const message = document.querySelector('#message');
+
+button.addEventListener('click', () => {
+  message.textContent = 'Great job! JavaScript made this message appear.';
+});`,
+};
 
 function App() {
   const [progress, setProgress] = useState(loadProgress);
   const [activeNavItem, setActiveNavItem] = useState('home');
   const [selectedLessonId, setSelectedLessonId] = useState(null);
   const [xpFeedback, setXpFeedback] = useState('');
+  const [playgroundCode, setPlaygroundCode] = useLocalStorage(PLAYGROUND_STORAGE_KEY, starterPlaygroundCode);
 
   const level = getLevelFromXp(progress.totalXp);
   const completedChecklistCount = getCompletedChecklistCount(progress, dailyChecklist);
@@ -120,8 +158,50 @@ function App() {
   }
 
   function completePracticeChallenge() {
-    const challengeItem = dailyChecklist.find((item) => item.id === 'solve-challenge');
-    if (challengeItem) completeItem(challengeItem, 'Practice challenge solved!');
+    if (!practiceChecklistItem) return;
+
+    setProgress((currentProgress) => {
+      const result = completeChecklistItem(currentProgress, practiceChecklistItem, dailyChecklist);
+      const goalMessage = result.goalCompletedNow ? ' Daily goal complete — streak updated!' : '';
+
+      if (result.xpEarned > 0) {
+        setXpFeedback(`Practice complete! You earned +${result.xpEarned} XP for coding today.${goalMessage}`);
+        return {
+          ...result.progress,
+          practiceCompletions: (result.progress.practiceCompletions ?? 0) + 1,
+        };
+      }
+
+      setXpFeedback('Practice is already complete for today. Your XP is safely saved!');
+      return result.progress;
+    });
+  }
+
+  function updatePlaygroundCode(language, value) {
+    // Each textarea updates one part of the playground, then the preview rebuilds from all three parts.
+    setPlaygroundCode((currentCode) => ({
+      ...starterPlaygroundCode,
+      ...currentCode,
+      [language]: value,
+    }));
+  }
+
+  function resetPlaygroundCode() {
+    // Reset keeps the saved local-first draft, but changes it back to the beginner starter project.
+    setPlaygroundCode(starterPlaygroundCode);
+    setXpFeedback('Playground reset to the starter challenge. Try changing the heading or button colour!');
+  }
+
+  function clearSavedPlaygroundCode() {
+    // Clear Saved Code removes the localStorage draft, then shows the same starter code again.
+    try {
+      window.localStorage.removeItem(PLAYGROUND_STORAGE_KEY);
+    } catch (error) {
+      console.warn('CodeQuest could not clear playground code from localStorage.', error);
+    }
+
+    setPlaygroundCode(starterPlaygroundCode);
+    setXpFeedback('Saved playground code cleared. The starter challenge is ready again.');
   }
 
   function completeReflection() {
@@ -173,17 +253,13 @@ function App() {
         )}
 
         {activeNavItem === 'practice' && (
-          <section className="lesson-card" aria-labelledby="practice-title">
-            <div className="section-heading">
-              <p className="eyebrow">Practice</p>
-              <span>+20 XP</span>
-            </div>
-            <h2 id="practice-title">Solve one practice challenge</h2>
-            <p>Try a tiny HTML button challenge to build confidence one step at a time.</p>
-            <button className="primary-button" type="button" onClick={completePracticeChallenge}>
-              Mark practice complete
-            </button>
-          </section>
+          <CodePlayground
+            code={playgroundCode}
+            onChangeCode={updatePlaygroundCode}
+            onClearSavedCode={clearSavedPlaygroundCode}
+            onCompletePractice={completePracticeChallenge}
+            onResetCode={resetPlaygroundCode}
+          />
         )}
 
         {activeNavItem === 'projects' && (
@@ -214,6 +290,7 @@ function App() {
               <ProfileRow label="Level" value={level} />
               <ProfileRow label="Streak" value={`${progress.streak} days`} />
               <ProfileRow label="Completed lessons" value={`${completedBeginnerLessonsCount}/${beginnerLessons.length}`} />
+              <ProfileRow label="Practice completions" value={progress.practiceCompletions ?? 0} />
               <ProfileRow label="Badges earned" value={badges.length ? badges.join(', ') : 'None yet'} />
               <ProfileRow label="Today’s checklist" value={`${completedChecklistCount}/${dailyChecklist.length} done`} />
             </div>
@@ -224,6 +301,141 @@ function App() {
       <BottomNav activeItem={activeNavItem} onSelect={selectNavItem} />
     </div>
   );
+}
+
+
+function CodePlayground({ code, onChangeCode, onClearSavedCode, onCompletePractice, onResetCode }) {
+  const safeCode = {
+    ...starterPlaygroundCode,
+    ...code,
+  };
+  const previewDocument = buildPreviewDocument(safeCode);
+
+  return (
+    <section className="lesson-card playground-card" aria-labelledby="practice-title">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">Practice</p>
+          <h2 id="practice-title">Code Playground</h2>
+        </div>
+        <span>+20 XP today</span>
+      </div>
+      <p>
+        Practise HTML, CSS, and JavaScript in tiny steps. Your code saves on this device as you type,
+        so refreshing the page keeps your work.
+      </p>
+
+      <div className="starter-challenge" aria-labelledby="starter-challenge-title">
+        <strong id="starter-challenge-title">Starter challenge</strong>
+        <p>Change the heading text, change the button colour, and make the button show your own message.</p>
+      </div>
+
+      <div className="playground-grid">
+        <div className="editor-stack" aria-label="Code editors">
+          <CodeEditor
+            helper="HTML is the structure: headings, paragraphs, buttons, and other page pieces."
+            label="HTML"
+            language="html"
+            onChangeCode={onChangeCode}
+            value={safeCode.html}
+          />
+          <CodeEditor
+            helper="CSS is the style: colours, spacing, fonts, and layout."
+            label="CSS"
+            language="css"
+            onChangeCode={onChangeCode}
+            value={safeCode.css}
+          />
+          <CodeEditor
+            helper="JavaScript is the action: it can react when someone clicks or types."
+            label="JavaScript"
+            language="js"
+            onChangeCode={onChangeCode}
+            value={safeCode.js}
+          />
+        </div>
+
+        <div className="preview-panel">
+          <div className="preview-header">
+            <strong>Live preview</strong>
+            <span>Updates as you type</span>
+          </div>
+          <iframe
+            className="preview-frame"
+            sandbox="allow-scripts"
+            srcDoc={previewDocument}
+            title="Code playground live preview"
+          />
+        </div>
+      </div>
+
+      <details className="hint-card playground-hints">
+        <summary>Need a hint?</summary>
+        <ul>
+          <li>Heading text lives between <code>&lt;h1&gt;</code> and <code>&lt;/h1&gt;</code>.</li>
+          <li>The button colour is the <code>background</code> value in CSS.</li>
+          <li>The click message is the text inside <code>message.textContent</code>.</li>
+        </ul>
+      </details>
+
+      <div className="playground-actions">
+        <button className="primary-button" type="button" onClick={onCompletePractice}>
+          Complete practice
+        </button>
+        <button className="secondary-button" type="button" onClick={onResetCode}>
+          Reset starter code
+        </button>
+        <button className="secondary-button danger-button" type="button" onClick={onClearSavedCode}>
+          Clear saved code
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function CodeEditor({ helper, label, language, onChangeCode, value }) {
+  return (
+    <label className="code-editor">
+      <span>{label}</span>
+      <small>{helper}</small>
+      <textarea
+        autoCapitalize="off"
+        autoCorrect="off"
+        spellCheck="false"
+        value={value}
+        onChange={(event) => onChangeCode(language, event.target.value)}
+      />
+    </label>
+  );
+}
+
+function buildPreviewDocument({ html, css, js }) {
+  // The iframe uses srcDoc so the learner's HTML, CSS, and JavaScript run inside a separate preview.
+  // The sandbox allows scripts for button practice, but does not allow same-origin access to CodeQuest.
+  const safeCss = css.replace(/<\/style/gi, '<\\/style');
+  const safeJs = js.replace(/<\/script/gi, '<\\/script');
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body { margin: 0; background: #ffffff; }
+      ${safeCss}
+    </style>
+  </head>
+  <body>
+    ${html}
+    <script>
+      try {
+        ${safeJs}
+      } catch (error) {
+        document.body.insertAdjacentHTML('beforeend', '<pre style="white-space: pre-wrap; color: #b42318; padding: 12px;">JavaScript error: ' + error.message + '</pre>');
+      }
+    </script>
+  </body>
+</html>`;
 }
 
 function HomeLessonCard({ nextLesson, onOpenLesson }) {
