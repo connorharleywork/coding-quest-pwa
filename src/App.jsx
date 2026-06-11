@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BottomNav } from './components/BottomNav.jsx';
 import { StatCard } from './components/StatCard.jsx';
 import { dailyChecklist, dailyGoal, todaysLesson } from './data/sampleData.js';
@@ -17,14 +17,10 @@ import {
 } from './lib/progress.js';
 
 function App() {
-  const todayKey = useMemo(() => getLocalDateKey(), []);
+  const [todayKey, setTodayKey] = useState(() => getLocalDateKey());
   const [progress, setProgress] = useLocalStorage('codequest-progress', initialProgress);
   const [activeNavItem, setActiveNavItem] = useState('home');
   const [feedback, setFeedback] = useState('');
-
-  // Milestone 2 has one default progress shape: `initialProgress` from
-  // `src/lib/progress.js`. Keep old Milestone 1 defaults out of this file so
-  // duplicate merge fragments cannot break JSX parsing or overwrite progress.
 
   // Normalize saved progress on every render so old Milestone 1 data still works
   // and the UI can safely read all Milestone 2 fields.
@@ -37,15 +33,31 @@ function App() {
   const earnedBadges = getEarnedBadgeDetails(safeProgress);
 
   useEffect(() => {
+    function refreshLocalDate() {
+      setTodayKey(getLocalDateKey());
+    }
+
+    // Check the device-local date while the app is open so the daily checklist
+    // can reset after midnight without needing a full page refresh.
+    const intervalId = window.setInterval(refreshLocalDate, 60_000);
+    document.addEventListener('visibilitychange', refreshLocalDate);
+
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', refreshLocalDate);
+    };
+  }, []);
+
+  useEffect(() => {
     const sessionResult = startDailySession(progress, todayKey);
     setProgress(sessionResult.progress);
 
     if (sessionResult.message) {
       setFeedback(sessionResult.message);
     }
-    // This runs when the app opens. The progress helper prevents duplicate XP
-    // during React Strict Mode and browser refreshes by checking today's item ids.
-  }, []);
+    // This runs when the app opens and when the local date changes. The progress
+    // helper prevents duplicate XP by checking today's completed item ids.
+  }, [todayKey]);
 
   useEffect(() => {
     if (!feedback) return undefined;
