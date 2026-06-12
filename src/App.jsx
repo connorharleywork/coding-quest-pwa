@@ -3,6 +3,7 @@ import { BottomNav } from './components/BottomNav.jsx';
 import { StatCard } from './components/StatCard.jsx';
 import { useLocalStorage } from './hooks/useLocalStorage.js';
 import { beginnerLessons } from './data/lessons.js';
+import { beginnerProjects } from './data/projects.js';
 import {
   AI_HELPER_XP_REWARD,
   aiPromptCategories,
@@ -66,6 +67,7 @@ function App() {
   const [progress, setProgress] = useState(loadProgress);
   const [activeNavItem, setActiveNavItem] = useState('home');
   const [selectedLessonId, setSelectedLessonId] = useState(null);
+  const [selectedProjectId, setSelectedProjectId] = useState(null);
   const [xpFeedback, setXpFeedback] = useState('');
   const [playgroundCode, setPlaygroundCode] = useLocalStorage(PLAYGROUND_STORAGE_KEY, starterPlaygroundCode);
   const [aiHelperDraft, setAiHelperDraft] = useLocalStorage(AI_HELPER_STORAGE_KEY, emptyAiHelperDraft);
@@ -78,7 +80,10 @@ function App() {
   const completedBeginnerLessonsCount = beginnerLessons.filter((lesson) => progress.completedLessons.includes(lesson.id)).length;
   const nextLesson = getFirstUnlockedIncompleteLesson(progress.completedLessons);
   const selectedLesson = selectedLessonId ? beginnerLessons.find((lesson) => lesson.id === selectedLessonId) : null;
-  const badges = useMemo(() => getEarnedBadges(progress, dailyGoalIsComplete, completedBeginnerLessonsCount), [dailyGoalIsComplete, progress, completedBeginnerLessonsCount]);
+  const selectedProject = selectedProjectId ? beginnerProjects.find((project) => project.id === selectedProjectId) : null;
+  const completedProjectsCount = beginnerProjects.filter((project) => progress.projects?.[project.id]?.status === 'completed').length;
+  const nextProject = getFirstUnlockedIncompleteProject(progress.projects);
+  const badges = useMemo(() => getEarnedBadges(progress, dailyGoalIsComplete, completedBeginnerLessonsCount, completedProjectsCount), [dailyGoalIsComplete, progress, completedBeginnerLessonsCount, completedProjectsCount]);
 
   useEffect(() => {
     saveProgress(progress);
@@ -293,6 +298,115 @@ ${safeCode.js}`,
     });
   }
 
+  function openProject(project) {
+    const status = getProjectStatus(project.id, progress.projects);
+
+    if (status === 'locked') {
+      setXpFeedback('That project is locked for now. Complete the project before it to unlock this build!');
+      return;
+    }
+
+    setSelectedProjectId(project.id);
+    setActiveNavItem('projects');
+  }
+
+  function toggleProjectChecklistItem(project, checklistIndex) {
+    setProgress((currentProgress) => {
+      const currentProjectProgress = currentProgress.projects?.[project.id] ?? {};
+      const checkedSteps = currentProjectProgress.checkedSteps ?? {};
+      const isCompleted = currentProjectProgress.status === 'completed';
+      const nextCheckedSteps = {
+        ...checkedSteps,
+        [checklistIndex]: !checkedSteps[checklistIndex],
+      };
+
+      return {
+        ...currentProgress,
+        projects: {
+          ...currentProgress.projects,
+          [project.id]: {
+            ...currentProjectProgress,
+            status: isCompleted ? 'completed' : 'in-progress',
+            checkedSteps: nextCheckedSteps,
+          },
+        },
+      };
+    });
+  }
+
+  function completeProject(project) {
+    const currentProjectProgress = progress.projects?.[project.id] ?? {};
+    const allChecklistItemsDone = project.completionChecklist.every((_, index) => currentProjectProgress.checkedSteps?.[index]);
+
+    if (!allChecklistItemsDone) {
+      setXpFeedback('Almost there! Tick every project checklist item before completing this project.');
+      return;
+    }
+
+    if (currentProjectProgress.status === 'completed') {
+      setXpFeedback(`${project.title} is already complete. Your project XP is safely saved!`);
+      return;
+    }
+
+    setProgress((currentProgress) => {
+      const latestProjectProgress = currentProgress.projects?.[project.id] ?? {};
+      if (latestProjectProgress.status === 'completed') {
+        return currentProgress;
+      }
+
+      const nextProject = getNextProject(project.id);
+      const nextProjects = {
+        ...currentProgress.projects,
+        [project.id]: {
+          ...latestProjectProgress,
+          status: 'completed',
+          checkedSteps: project.completionChecklist.reduce((steps, _, index) => ({ ...steps, [index]: true }), latestProjectProgress.checkedSteps ?? {}),
+          completedAt: new Date().toISOString(),
+          xpAwarded: true,
+        },
+      };
+
+      if (nextProject && !nextProjects[nextProject.id]) {
+        nextProjects[nextProject.id] = {
+          status: 'unlocked',
+          checkedSteps: {},
+        };
+      }
+
+      return {
+        ...currentProgress,
+        totalXp: currentProgress.totalXp + project.xpReward,
+        projects: nextProjects,
+      };
+    });
+
+    setXpFeedback(`Project complete! ${project.title} is finished. +${project.xpReward} XP earned, and the next project is unlocked. 🎉`);
+  }
+
+  function loadProjectIntoPlayground(project) {
+    setPlaygroundCode(project.starterCode);
+    setActiveNavItem('practice');
+    setXpFeedback(`${project.title} starter code loaded into Practice. Edit it in the Playground when you are ready!`);
+  }
+
+  function openAiHelperFromProject(project) {
+    openAiHelperWithDraft({
+      categoryId: 'project-help',
+      fileName: project.title,
+      buildGoal: `I am building the CodeQuest beginner project called ${project.title}. Project goal: ${project.goal}`,
+      confusion: `Please help me understand the steps, fix my project code if I paste it, and suggest one small improvement. Steps: ${project.steps.join(' ')}`,
+      code: `Starter HTML:
+${project.starterCode.html}
+
+Starter CSS:
+${project.starterCode.css}
+
+Starter JavaScript:
+${project.starterCode.js}`,
+      errorMessage: '',
+    });
+  }
+
   async function copyAiPrompt(prompt) {
     try {
       await navigator.clipboard.writeText(prompt);
@@ -313,6 +427,9 @@ ${safeCode.js}`,
     setActiveNavItem(navItem);
     if (navItem !== 'learn') {
       setSelectedLessonId(null);
+    }
+    if (navItem !== 'projects') {
+      setSelectedProjectId(null);
     }
   }
 
@@ -342,6 +459,7 @@ ${safeCode.js}`,
         {activeNavItem === 'home' && (
           <>
             <HomeLessonCard nextLesson={nextLesson} onOpenLesson={openTodaysLesson} />
+            <HomeProjectCard nextProject={nextProject} onOpenProject={openProject} completedProjectsCount={completedProjectsCount} />
             {renderChecklistCard({ checklistIsComplete, completedChecklistCount, toggleChecklistItem, progress, dailyGoalIsComplete })}
           </>
         )}
@@ -381,17 +499,26 @@ ${safeCode.js}`,
         )}
 
         {activeNavItem === 'projects' && (
-          <section className="lesson-card" aria-labelledby="projects-title">
-            <div className="section-heading">
-              <p className="eyebrow">Projects</p>
-              <span>Mini build</span>
-            </div>
-            <h2 id="projects-title">Reflect on your progress</h2>
-            <p>Write one thing you learned today before you start your next beginner project.</p>
-            <button className="primary-button" type="button" onClick={completeReflection}>
-              Mark reflection complete
-            </button>
-          </section>
+          selectedProject
+            ? (
+              <ProjectDetail
+                project={selectedProject}
+                projectProgress={progress.projects?.[selectedProject.id]}
+                onAskAiHelp={openAiHelperFromProject}
+                onBack={() => setSelectedProjectId(null)}
+                onComplete={completeProject}
+                onLoadStarterCode={loadProjectIntoPlayground}
+                onToggleChecklistItem={toggleProjectChecklistItem}
+              />
+            )
+            : (
+              <ProjectsScreen
+                completedProjectsCount={completedProjectsCount}
+                onOpenProject={openProject}
+                onReflect={completeReflection}
+                projectProgress={progress.projects}
+              />
+            )
         )}
 
         {activeNavItem === 'profile' && (
@@ -408,6 +535,7 @@ ${safeCode.js}`,
               <ProfileRow label="Level" value={level} />
               <ProfileRow label="Streak" value={`${progress.streak} days`} />
               <ProfileRow label="Completed lessons" value={`${completedBeginnerLessonsCount}/${beginnerLessons.length}`} />
+              <ProfileRow label="Completed projects" value={`${completedProjectsCount}/${beginnerProjects.length}`} />
               <ProfileRow label="Practice completions" value={progress.practiceCompletions ?? 0} />
               <ProfileRow label="AI Helper uses" value={progress.aiHelperUses ?? 0} />
               <ProfileRow label="AI Helper XP today" value={progress.lastAiHelperRewardDate === getDeviceLocalDate() ? 'Collected' : `+${AI_HELPER_XP_REWARD} available`} />
@@ -709,6 +837,172 @@ function buildPreviewDocument({ html, css, js }) {
 </html>`;
 }
 
+
+function HomeProjectCard({ completedProjectsCount, nextProject, onOpenProject }) {
+  if (!nextProject) {
+    return (
+      <section className="lesson-card current-project-card" aria-labelledby="current-project-title">
+        <div className="section-heading">
+          <p className="eyebrow">Current project</p>
+          <span>{completedProjectsCount}/{beginnerProjects.length}</span>
+        </div>
+        <h2 id="current-project-title">All projects complete!</h2>
+        <p>You have built every beginner project. Reopen Projects to review your starter code and ideas.</p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="lesson-card current-project-card" aria-labelledby="current-project-title">
+      <div className="section-heading">
+        <p className="eyebrow">Current project</p>
+        <span>+{nextProject.xpReward} XP</span>
+      </div>
+      <h2 id="current-project-title">{nextProject.title}</h2>
+      <p>{nextProject.description}</p>
+      <div className="lesson-meta">
+        <span>{nextProject.difficulty}</span>
+        <span>{nextProject.estimatedTime}</span>
+      </div>
+      <button className="primary-button" type="button" onClick={() => onOpenProject(nextProject)}>
+        Open current project
+      </button>
+    </section>
+  );
+}
+
+function ProjectsScreen({ completedProjectsCount, onOpenProject, onReflect, projectProgress }) {
+  return (
+    <section className="lesson-card projects-screen" aria-labelledby="projects-title">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">Projects</p>
+          <h2 id="projects-title">Guided beginner builds</h2>
+        </div>
+        <span>{completedProjectsCount}/{beginnerProjects.length} done</span>
+      </div>
+      <p>Pick a real project, follow the tiny steps, load the starter code into Practice, and mark it complete when your checklist is done.</p>
+
+      <div className="project-grid">
+        {beginnerProjects.map((project) => {
+          const status = getProjectStatus(project.id, projectProgress);
+
+          return (
+            <button
+              className={`project-card ${status}`}
+              disabled={status === 'locked'}
+              key={project.id}
+              onClick={() => onOpenProject(project)}
+              type="button"
+            >
+              <span className="project-card-topline">
+                <strong>{project.title}</strong>
+                <small>{getProjectStatusLabel(status)}</small>
+              </span>
+              <span>{project.description}</span>
+              <span className="lesson-meta project-meta">
+                <small>{project.difficulty}</small>
+                <small>{project.estimatedTime}</small>
+                <small>+{project.xpReward} XP</small>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="starter-challenge">
+        <strong>Reflection still counts</strong>
+        <p>After building, write one thing you learned to finish the daily reflection checklist item.</p>
+      </div>
+      <button className="secondary-button" type="button" onClick={onReflect}>
+        Mark reflection complete
+      </button>
+    </section>
+  );
+}
+
+function ProjectDetail({ project, projectProgress, onAskAiHelp, onBack, onComplete, onLoadStarterCode, onToggleChecklistItem }) {
+  const safeProjectProgress = projectProgress ?? { checkedSteps: {} };
+  const status = getProjectStatus(project.id, { [project.id]: safeProjectProgress });
+  const checkedCount = project.completionChecklist.filter((_, index) => safeProjectProgress.checkedSteps?.[index]).length;
+  const allChecklistItemsDone = checkedCount === project.completionChecklist.length;
+
+  return (
+    <article className="lesson-card project-detail" aria-labelledby="project-detail-title">
+      <button className="back-button" type="button" onClick={onBack}>← Back to projects</button>
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">Guided project</p>
+          <h2 id="project-detail-title">{project.title}</h2>
+        </div>
+        <span>{getProjectStatusLabel(status)}</span>
+      </div>
+      <p>{project.description}</p>
+      <div className="lesson-meta">
+        <span>{project.difficulty}</span>
+        <span>{project.estimatedTime}</span>
+        <span>+{project.xpReward} XP</span>
+      </div>
+
+      <div className="mini-task">
+        <strong>Project goal</strong>
+        <p>{project.goal}</p>
+      </div>
+
+      <div className="project-section">
+        <h3>Steps to follow</h3>
+        <ol>
+          {project.steps.map((step) => <li key={step}>{step}</li>)}
+        </ol>
+      </div>
+
+      <details className="hint-card" open>
+        <summary>Beginner hints</summary>
+        <ul>
+          {project.hints.map((hint) => <li key={hint}>{hint}</li>)}
+        </ul>
+      </details>
+
+      <div className="project-section">
+        <div className="section-heading compact-heading">
+          <strong>Completion checklist</strong>
+          <span>{checkedCount}/{project.completionChecklist.length}</span>
+        </div>
+        <div className="checklist-items">
+          {project.completionChecklist.map((item, index) => (
+            <label className="checklist-item" key={item}>
+              <input
+                checked={Boolean(safeProjectProgress.checkedSteps?.[index])}
+                onChange={() => onToggleChecklistItem(project, index)}
+                type="checkbox"
+              />
+              <span>{item}</span>
+            </label>
+          ))}
+        </div>
+        {!allChecklistItemsDone && <p className="friendly-warning">Tick each checklist item when you have tried it in Practice. Then you can complete the project.</p>}
+      </div>
+
+      <div className="code-example">
+        <strong>Starter code preview</strong>
+        <pre><code>{`HTML:\n${project.starterCode.html}\n\nCSS:\n${project.starterCode.css}\n\nJavaScript:\n${project.starterCode.js}`}</code></pre>
+      </div>
+
+      <div className="lesson-actions project-actions">
+        <button className="primary-button" type="button" onClick={() => onComplete(project)}>
+          {status === 'completed' ? 'Project complete ✓' : `Complete Project for ${project.xpReward} XP`}
+        </button>
+        <button className="secondary-button" type="button" onClick={() => onLoadStarterCode(project)}>
+          Load starter code into Playground
+        </button>
+        <button className="secondary-button" type="button" onClick={() => onAskAiHelp(project)}>
+          Get AI help with this project
+        </button>
+      </div>
+    </article>
+  );
+}
+
 function HomeLessonCard({ nextLesson, onOpenLesson }) {
   if (!nextLesson) {
     return (
@@ -879,6 +1173,41 @@ function ProfileRow({ label, value }) {
   );
 }
 
+function getProjectStatus(projectId, projectProgress = {}) {
+  const projectIndex = beginnerProjects.findIndex((project) => project.id === projectId);
+  const savedStatus = projectProgress?.[projectId]?.status;
+
+  if (savedStatus === 'completed') return 'completed';
+  if (savedStatus === 'in-progress') return 'in-progress';
+  if (projectIndex === 0) return 'unlocked';
+
+  const previousProject = beginnerProjects[projectIndex - 1];
+  if (previousProject && projectProgress?.[previousProject.id]?.status === 'completed') {
+    return savedStatus === 'unlocked' ? 'unlocked' : 'unlocked';
+  }
+
+  return 'locked';
+}
+
+function getProjectStatusLabel(status) {
+  if (status === 'completed') return 'Completed ✓';
+  if (status === 'in-progress') return 'In progress';
+  if (status === 'unlocked') return 'Unlocked';
+  return 'Locked 🔒';
+}
+
+function getFirstUnlockedIncompleteProject(projectProgress = {}) {
+  return beginnerProjects.find((project) => {
+    const status = getProjectStatus(project.id, projectProgress);
+    return status !== 'locked' && status !== 'completed';
+  });
+}
+
+function getNextProject(projectId) {
+  const projectIndex = beginnerProjects.findIndex((project) => project.id === projectId);
+  return beginnerProjects[projectIndex + 1] ?? null;
+}
+
 function getFirstUnlockedIncompleteLesson(completedLessonIds) {
   return beginnerLessons.find((lesson) => isLessonUnlocked(lesson.id, completedLessonIds) && !completedLessonIds.includes(lesson.id));
 }
@@ -897,10 +1226,12 @@ function getLessonStatusLabel(status) {
   return 'Locked 🔒';
 }
 
-function getEarnedBadges(progress, dailyGoalIsComplete, completedBeginnerLessonsCount) {
+function getEarnedBadges(progress, dailyGoalIsComplete, completedBeginnerLessonsCount, completedProjectsCount) {
   return [
     completedBeginnerLessonsCount > 0 && 'First Lesson',
     completedBeginnerLessonsCount === beginnerLessons.length && 'Path Explorer',
+    completedProjectsCount > 0 && 'Builder',
+    completedProjectsCount === beginnerProjects.length && 'Project Finisher',
     progress.totalXp >= 100 && '100 XP Club',
     dailyGoalIsComplete && 'Daily Goal',
     progress.streak >= 3 && 'Streak Starter',

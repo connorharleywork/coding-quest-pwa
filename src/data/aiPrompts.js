@@ -45,6 +45,12 @@ export const aiPromptCategories = [
     helper: 'Get feedback on your HTML, CSS, and JavaScript practice code.',
   },
   {
+    id: 'project-help',
+    label: 'Get project help',
+    shortLabel: 'Project help',
+    helper: 'Ask for steps, bug fixes, improvements, or simpler explanations for a beginner project.',
+  },
+  {
     id: 'codex-safe-edit',
     label: 'Ask Codex to safely edit the project',
     shortLabel: 'Codex safe edit',
@@ -83,6 +89,17 @@ export const readyMadePromptTemplates = [
       fileName: 'My React + Vite app',
       buildGoal: 'I want to understand the whole app before I edit it.',
       confusion: 'Please explain the folder structure, important files, imports and exports, state, localStorage, and how data flows through the app.',
+    },
+  },
+  {
+    id: 'project-coach',
+    title: 'Project coach',
+    categoryId: 'project-help',
+    description: 'Use this when you are building one of the guided beginner projects.',
+    draft: {
+      fileName: 'CodeQuest guided project',
+      buildGoal: 'I am building a beginner HTML, CSS, and JavaScript project.',
+      confusion: 'Please help me understand the steps, fix my pasted project code if needed, and suggest one small improvement after it works.',
     },
   },
   {
@@ -148,6 +165,8 @@ function getCategoryOpening(categoryId) {
       return 'You are a patient coding tutor. Help me understand this lesson.';
     case 'review-playground':
       return 'You are a patient coding tutor. Review my playground code and help me learn from it.';
+    case 'project-help':
+      return 'You are a patient coding project coach. Help me build this beginner project step by step.';
     case 'codex-safe-edit':
       return 'You are Codex helping in an existing project. Make safe, small changes only.';
     case 'explain-code':
@@ -170,6 +189,8 @@ function getCategoryRequest(categoryId) {
       return 'Please summarize the lesson, give a real-world analogy, explain the key terms, and ask me 3 quick check-for-understanding questions.';
     case 'review-playground':
       return 'Please review my HTML, CSS, and JavaScript separately, point out one thing I did well, one bug risk, and one beginner-friendly next improvement.';
+    case 'project-help':
+      return 'Please help me with this project in one of these ways: explain how to build it, find bugs in my pasted code, suggest simple improvements, or explain the checklist steps in beginner-friendly words.';
     case 'codex-safe-edit':
       return 'Please start from the latest main branch, create a fresh branch, do not rebuild the app from scratch, keep the diff small, avoid unrelated files, explain changed files, and run the build if possible.';
     case 'explain-code':

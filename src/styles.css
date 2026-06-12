@@ -817,3 +817,135 @@ h2 {
     max-width: 48rem;
   }
 }
+
+.current-project-card,
+.projects-screen,
+.project-detail {
+  display: grid;
+  gap: 1rem;
+}
+
+.projects-screen,
+.project-detail {
+  grid-column: 1 / -1;
+}
+
+.project-grid,
+.project-section {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.project-grid {
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+}
+
+.project-card {
+  display: grid;
+  gap: 0.75rem;
+  min-height: 13rem;
+  width: 100%;
+  border: 1px solid #ececff;
+  border-radius: 22px;
+  background: #ffffff;
+  color: #272c5f;
+  padding: 1rem;
+  text-align: left;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.project-card:not(:disabled):hover,
+.project-card:not(:disabled):focus-visible {
+  border-color: rgba(109, 93, 252, 0.35);
+  box-shadow: 0 16px 30px rgba(59, 54, 138, 0.12);
+  transform: translateY(-2px);
+}
+
+.project-card:disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
+}
+
+.project-card.completed {
+  border-color: rgba(32, 199, 185, 0.36);
+  background: #f0fffc;
+}
+
+.project-card.locked {
+  background: #f7f7fc;
+}
+
+.project-card.in-progress {
+  border-color: rgba(255, 190, 80, 0.5);
+  background: #fffaf0;
+}
+
+.project-card-topline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.project-card-topline strong,
+.project-section h3 {
+  color: #272c5f;
+  font-weight: 900;
+}
+
+.project-card-topline small,
+.project-meta small {
+  border-radius: 999px;
+  background: #f0efff;
+  color: #5d50e6;
+  font-size: 0.74rem;
+  font-weight: 850;
+  padding: 0.35rem 0.55rem;
+  white-space: nowrap;
+}
+
+.project-card > span:not(.project-card-topline):not(.project-meta) {
+  color: #6f7393;
+  line-height: 1.45;
+}
+
+.project-meta {
+  margin: 0;
+}
+
+.project-section h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.project-section ol,
+.hint-card ul {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+  padding-left: 1.3rem;
+  color: #4d5276;
+  line-height: 1.5;
+}
+
+.friendly-warning {
+  margin: 0;
+  border-radius: 16px;
+  background: #fff8d8;
+  color: #6b5700;
+  font-weight: 800;
+  padding: 0.8rem;
+}
+
+.project-actions {
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 760px) {
+  .project-actions {
+    grid-template-columns: 1.2fr 1fr 1fr;
+  }
+}
