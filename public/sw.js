@@ -1,13 +1,17 @@
 // CodeQuest stays local-first: this service worker caches the app shell and
 // same-origin files after they are requested so the installed PWA can reopen
-// after the first successful load.
-const CACHE_NAME = 'codequest-shell-v3';
+// after the first successful load. Paths are scoped from the service worker
+// registration so the same file works at / locally and /coding-quest-pwa/ on
+// GitHub Pages.
+const CACHE_NAME = 'codequest-shell-v4';
+const APP_BASE = new URL(self.registration.scope).pathname;
+const appUrl = (path = '') => new URL(path, self.registration.scope).pathname;
 const APP_SHELL = [
-  '/',
-  '/index.html',
-  '/manifest.webmanifest',
-  '/favicon.svg',
-  '/icons/codequest-icon.svg',
+  appUrl(),
+  appUrl('index.html'),
+  appUrl('manifest.webmanifest'),
+  appUrl('favicon.svg'),
+  appUrl('icons/codequest-icon.svg'),
 ];
 
 self.addEventListener('install', (event) => {
@@ -28,17 +32,17 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
   const requestUrl = new URL(event.request.url);
-  if (requestUrl.origin !== self.location.origin) return;
+  if (requestUrl.origin !== self.location.origin || !requestUrl.pathname.startsWith(APP_BASE)) return;
 
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
         .then((networkResponse) => {
           const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', responseToCache));
+          caches.open(CACHE_NAME).then((cache) => cache.put(appUrl('index.html'), responseToCache));
           return networkResponse;
         })
-        .catch(() => caches.match('/index.html'))
+        .catch(() => caches.match(appUrl('index.html')).then((cachedResponse) => cachedResponse || caches.match(appUrl())))
     );
     return;
   }

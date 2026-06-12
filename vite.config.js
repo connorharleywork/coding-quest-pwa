@@ -1,10 +1,11 @@
 import { defineConfig } from 'vite';
 
-// Vite transforms JSX with esbuild. Setting the automatic runtime means JSX
-// compiles to react/jsx-runtime imports instead of React.createElement calls,
-// so components do not need a global `React` variable to render.
-export default defineConfig({
+// GitHub Pages serves this repository as a project page at
+// /coding-quest-pwa/. Keep Vite dev on / so local development stays simple,
+// then use the project base path only for production builds.
+export default defineConfig(({ command }) => ({
+  base: command === 'serve' ? '/' : '/coding-quest-pwa/',
   esbuild: {
     jsx: 'automatic',
   },
-});
+}));
