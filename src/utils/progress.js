@@ -5,6 +5,7 @@ const starterProgress = {
   totalXp: 120,
   streak: 0,
   completedLessons: ['lesson-web-basics'],
+  projects: {},
   practiceCompletions: 0,
   aiHelperUses: 0,
   lastAiHelperRewardDate: null,
@@ -61,6 +62,7 @@ function migrateProgress(savedProgress) {
       ? savedProgress.completedLessons
       : starterProgress.completedLessons,
     todayChecklist: savedProgress.todayChecklist ?? savedProgress.checklist ?? starterProgress.todayChecklist,
+    projects: savedProgress.projects && typeof savedProgress.projects === 'object' ? savedProgress.projects : starterProgress.projects,
     todayAwardedChecklist: savedProgress.todayAwardedChecklist ?? {},
     practiceCompletions: Number.isFinite(savedProgress.practiceCompletions)
       ? savedProgress.practiceCompletions
