@@ -45,6 +45,12 @@ export const aiPromptCategories = [
     helper: 'Get feedback on your HTML, CSS, and JavaScript practice code.',
   },
   {
+    id: 'challenge-help',
+    label: 'Get challenge help',
+    shortLabel: 'Challenge help',
+    helper: 'Ask for hints or explanations for a CodeQuest challenge without auto-sending anything.',
+  },
+  {
     id: 'project-help',
     label: 'Get project help',
     shortLabel: 'Project help',
@@ -134,6 +140,50 @@ export const readyMadePromptTemplates = [
       confusion: 'Please start from latest main, create a fresh branch, do not rebuild from scratch, keep changes small, explain changed files, and run the build if possible.',
     },
   },
+  {
+    id: 'challenge-not-passing',
+    title: 'Explain why my challenge is not passing',
+    categoryId: 'challenge-help',
+    description: 'Paste challenge code and checker feedback for a beginner-friendly explanation.',
+    draft: {
+      fileName: 'CodeQuest challenge',
+      buildGoal: 'I am trying to pass a CodeQuest coding challenge.',
+      confusion: 'Please explain why my challenge is not passing. Do not shame me; show the next small fix first.',
+    },
+  },
+  {
+    id: 'challenge-hint-only',
+    title: 'Give me a hint without giving me the full answer',
+    categoryId: 'challenge-help',
+    description: 'Get one gentle nudge while keeping the solution yours.',
+    draft: {
+      fileName: 'CodeQuest challenge',
+      buildGoal: 'I want to solve this challenge myself.',
+      confusion: 'Please give me one hint without giving me the full answer.',
+    },
+  },
+  {
+    id: 'challenge-beginner-solution',
+    title: 'Explain the solution like I am a beginner',
+    categoryId: 'challenge-help',
+    description: 'Use after trying a challenge when you want the solution explained simply.',
+    draft: {
+      fileName: 'CodeQuest challenge',
+      buildGoal: 'I want to understand the solution to this beginner coding challenge.',
+      confusion: 'Please explain the solution like I am a beginner, step by step.',
+    },
+  },
+  {
+    id: 'similar-challenge',
+    title: 'Create a similar practice challenge',
+    categoryId: 'practice-challenge',
+    description: 'Ask for another tiny challenge using the same skill.',
+    draft: {
+      fileName: 'CodeQuest challenge',
+      buildGoal: 'I finished or tried a beginner CodeQuest challenge and want more practice.',
+      confusion: 'Please create a similar practice challenge with hints, but do not include the full answer until I ask.',
+    },
+  },
 ];
 
 export const emptyAiHelperDraft = {
@@ -187,6 +237,8 @@ function getCategoryOpening(categoryId) {
       return 'You are a patient coding tutor. Help me understand this lesson.';
     case 'review-playground':
       return 'You are a patient coding tutor. Review my playground code and help me learn from it.';
+    case 'challenge-help':
+      return 'You are a patient coding tutor. Help me understand this coding challenge without shaming me.';
     case 'project-help':
       return 'You are a patient coding project coach. Help me build this beginner project step by step.';
     case 'codex-safe-edit':
@@ -211,6 +263,8 @@ function getCategoryRequest(categoryId) {
       return 'Please summarize the lesson, give a real-world analogy, explain the key terms, and ask me 3 quick check-for-understanding questions.';
     case 'review-playground':
       return 'Please review my HTML, CSS, and JavaScript separately, point out one thing I did well, one bug risk, and one beginner-friendly next improvement.';
+    case 'challenge-help':
+      return 'Please use the challenge instructions, checker feedback, and pasted code to explain the next helpful step. If I asked for a hint, do not give the full answer.';
     case 'project-help':
       return 'Please help me with this project in one of these ways: explain how to build it, find bugs in my pasted code, suggest simple improvements, or explain the checklist steps in beginner-friendly words.';
     case 'codex-safe-edit':

@@ -4,6 +4,7 @@ import { StatCard } from './components/StatCard.jsx';
 import { useLocalStorage } from './hooks/useLocalStorage.js';
 import { beginnerLessons } from './data/lessons.js';
 import { beginnerProjects } from './data/projects.js';
+import { beginnerChallenges, getChallengeStarterCode } from './data/challenges.js';
 import { DAILY_REVIEW_GOAL, DAILY_REVIEW_XP_REWARD, reviewCards } from './data/reviewCards.js';
 import {
   AI_HELPER_XP_REWARD,
@@ -26,6 +27,7 @@ import {
   saveProgress,
   setChecklistItemCompletion,
 } from './utils/progress.js';
+import { checkChallengeCode } from './utils/challengeChecker.js';
 
 const openAppChecklistItem = dailyChecklist.find((item) => item.id === 'open-app');
 const readLessonChecklistItem = dailyChecklist.find((item) => item.id === 'read-lesson');
@@ -73,6 +75,8 @@ function App() {
   const [activeNavItem, setActiveNavItem] = useState('home');
   const [selectedLessonId, setSelectedLessonId] = useState(null);
   const [selectedProjectId, setSelectedProjectId] = useState(null);
+  const [selectedChallengeId, setSelectedChallengeId] = useState(null);
+  const [challengeFeedback, setChallengeFeedback] = useState(null);
   const [xpFeedback, setXpFeedback] = useState('');
   const [playgroundCode, setPlaygroundCode] = useLocalStorage(PLAYGROUND_STORAGE_KEY, starterPlaygroundCode);
   const [aiHelperDraft, setAiHelperDraft] = useLocalStorage(AI_HELPER_STORAGE_KEY, emptyAiHelperDraft);
@@ -89,8 +93,11 @@ function App() {
   const selectedProject = selectedProjectId ? beginnerProjects.find((project) => project.id === selectedProjectId) : null;
   const completedProjectsCount = beginnerProjects.filter((project) => progress.projects?.[project.id]?.status === 'completed').length;
   const nextProject = getFirstUnlockedIncompleteProject(progress.projects);
+  const completedChallengesCount = beginnerChallenges.filter((challenge) => getChallengeStatus(challenge.id, progress.challenges) === 'completed').length;
+  const nextChallenge = getFirstUnlockedIncompleteChallenge(progress.challenges);
+  const selectedChallenge = selectedChallengeId ? beginnerChallenges.find((challenge) => challenge.id === selectedChallengeId) : null;
   const reviewProgress = getReviewProgress(progress);
-  const weakSkills = getWeakSkills(reviewProgress);
+  const weakSkills = getWeakSkills(reviewProgress, progress.weakChallengeSkills);
   const dailyReviewCompletedCount = Math.min(reviewProgress.todayCompletedCount, DAILY_REVIEW_GOAL);
   const dailyReviewIsComplete = dailyReviewCompletedCount >= DAILY_REVIEW_GOAL;
   const todaysReviewCards = getPrioritizedReviewCards(reviewProgress);
@@ -324,6 +331,8 @@ function App() {
     setCopyFeedback('Prompt draft filled in. Review it, then copy when you are ready.');
     setActiveNavItem('ai-helper');
     setSelectedLessonId(null);
+    setSelectedProjectId(null);
+    setSelectedChallengeId(null);
   }
 
   function openAiHelperFromPlayground() {
@@ -500,6 +509,155 @@ ${project.starterCode.js}`,
     });
   }
 
+  function openChallenge(challenge) {
+    const status = getChallengeStatus(challenge.id, progress.challenges);
+
+    if (status === 'locked') {
+      setXpFeedback('That challenge is locked for now. Complete the challenge before it to unlock this one!');
+      return;
+    }
+
+    setSelectedChallengeId(challenge.id);
+    setChallengeFeedback(null);
+    setActiveNavItem('practice');
+  }
+
+  function updateChallengeCode(challenge, language, value) {
+    setProgress((currentProgress) => {
+      const currentChallenge = currentProgress.challenges?.[challenge.id] ?? {};
+      const currentCode = currentChallenge.code ?? getChallengeStarterCode(challenge);
+      const isCompleted = currentChallenge.status === 'completed';
+
+      return {
+        ...currentProgress,
+        challenges: {
+          ...currentProgress.challenges,
+          [challenge.id]: {
+            ...currentChallenge,
+            status: isCompleted ? 'completed' : 'in-progress',
+            code: {
+              ...getChallengeStarterCode(challenge),
+              ...currentCode,
+              [language]: value,
+            },
+            updatedAt: new Date().toISOString(),
+          },
+        },
+      };
+    });
+  }
+
+  function resetChallengeCode(challenge) {
+    setProgress((currentProgress) => ({
+      ...currentProgress,
+      challenges: {
+        ...currentProgress.challenges,
+        [challenge.id]: {
+          ...(currentProgress.challenges?.[challenge.id] ?? {}),
+          status: getChallengeStatus(challenge.id, currentProgress.challenges) === 'completed' ? 'completed' : 'unlocked',
+          code: getChallengeStarterCode(challenge),
+          updatedAt: new Date().toISOString(),
+        },
+      },
+    }));
+    setChallengeFeedback(null);
+    setXpFeedback(`${challenge.title} reset to its starter code.`);
+  }
+
+  function checkChallenge(challenge) {
+    const savedChallenge = progress.challenges?.[challenge.id] ?? {};
+    const code = savedChallenge.code ?? getChallengeStarterCode(challenge);
+    const result = checkChallengeCode(challenge, code);
+    setChallengeFeedback(result);
+
+    setProgress((currentProgress) => {
+      const currentChallenge = currentProgress.challenges?.[challenge.id] ?? {};
+      const wasCompleted = currentChallenge.status === 'completed';
+      const currentFailedChecks = currentChallenge.failedChecks ?? 0;
+      const nextChallengeProgress = {
+        ...currentChallenge,
+        status: result.allPassed ? 'completed' : 'in-progress',
+        code,
+        attempts: (currentChallenge.attempts ?? 0) + 1,
+        failedChecks: result.allPassed ? currentFailedChecks : currentFailedChecks + 1,
+        completedAt: result.allPassed ? (currentChallenge.completedAt ?? new Date().toISOString()) : currentChallenge.completedAt,
+      };
+      const nextChallenges = {
+        ...currentProgress.challenges,
+        [challenge.id]: nextChallengeProgress,
+      };
+      const nextChallenge = getNextChallenge(challenge.id);
+
+      if (result.allPassed && nextChallenge && !nextChallenges[nextChallenge.id]) {
+        nextChallenges[nextChallenge.id] = { status: 'unlocked' };
+      }
+
+      const shouldMarkWeakSkills = !result.allPassed && nextChallengeProgress.failedChecks >= 2;
+      const nextWeakChallengeSkills = shouldMarkWeakSkills
+        ? addWeakChallengeSkills(currentProgress.weakChallengeSkills, challenge.skillTags)
+        : currentProgress.weakChallengeSkills;
+
+      return {
+        ...currentProgress,
+        totalXp: result.allPassed && !wasCompleted ? currentProgress.totalXp + challenge.xpReward : currentProgress.totalXp,
+        challenges: nextChallenges,
+        weakChallengeSkills: nextWeakChallengeSkills,
+      };
+    });
+
+    if (result.allPassed) {
+      const alreadyCompleted = savedChallenge.status === 'completed';
+      setXpFeedback(alreadyCompleted
+        ? `${challenge.title} is still complete. XP is safely saved and will not duplicate.`
+        : `Challenge complete! ${challenge.title} passed. +${challenge.xpReward} XP earned. 🎉`);
+    } else {
+      setXpFeedback('Good attempt! The checker found a few next steps. Use the feedback and try again.');
+    }
+  }
+
+  function loadChallengeIntoPlayground(challenge) {
+    const savedChallenge = progress.challenges?.[challenge.id] ?? {};
+    const code = savedChallenge.code ?? getChallengeStarterCode(challenge);
+    const shouldLoad = window.confirm('Load this challenge into the regular Playground? This replaces the current saved Playground draft, but your separate challenge code stays saved.');
+
+    if (!shouldLoad) {
+      setXpFeedback('No problem — your Playground draft was not changed.');
+      return;
+    }
+
+    setPlaygroundCode(code);
+    setSelectedChallengeId(null);
+    setActiveNavItem('practice');
+    setXpFeedback(`${challenge.title} loaded into the Playground. Return to Challenges when you are ready to check it.`);
+  }
+
+  function openAiHelperFromChallenge(challenge, mode = 'not-passing') {
+    const savedChallenge = progress.challenges?.[challenge.id] ?? {};
+    const code = savedChallenge.code ?? getChallengeStarterCode(challenge);
+    const feedbackLines = challengeFeedback
+      ? [
+          `Passed: ${challengeFeedback.passed.map((item) => item.label).join('; ') || 'Nothing yet'}`,
+          `Needs work: ${challengeFeedback.needsWork.map((item) => item.label).join('; ') || 'Nothing'}`,
+          `Hint shown: ${challengeFeedback.nextHint}`,
+        ].join('\n')
+      : 'I have not checked this attempt yet.';
+    const modeText = {
+      hint: 'Give me a hint without giving me the full answer.',
+      explain: 'Explain the solution like I am a beginner.',
+      similar: 'Create a similar practice challenge.',
+      'not-passing': 'Explain why my challenge is not passing.',
+    }[mode];
+
+    openAiHelperWithDraft({
+      categoryId: mode === 'similar' ? 'practice-challenge' : 'challenge-help',
+      fileName: challenge.title,
+      buildGoal: `I am working on this CodeQuest challenge: ${challenge.instructions}`,
+      confusion: modeText,
+      code: `Checker feedback:\n${feedbackLines}\n\nHTML:\n${code.html}\n\nCSS:\n${code.css}\n\nJavaScript:\n${code.js}`,
+      errorMessage: '',
+    });
+  }
+
   async function copyAiPrompt(prompt) {
     try {
       await navigator.clipboard.writeText(prompt);
@@ -523,6 +681,10 @@ ${project.starterCode.js}`,
     }
     if (navItem !== 'projects') {
       setSelectedProjectId(null);
+    }
+    if (navItem !== 'practice') {
+      setSelectedChallengeId(null);
+      setChallengeFeedback(null);
     }
   }
 
@@ -553,6 +715,7 @@ ${project.starterCode.js}`,
           <>
             <HomeLessonCard nextLesson={nextLesson} onOpenLesson={openTodaysLesson} />
             <HomeProjectCard nextProject={nextProject} onOpenProject={openProject} completedProjectsCount={completedProjectsCount} />
+            <HomeChallengeCard completedChallengesCount={completedChallengesCount} nextChallenge={nextChallenge} onOpenChallenge={openChallenge} />
             <HomeReviewCard
               dailyReviewCompletedCount={dailyReviewCompletedCount}
               dailyReviewIsComplete={dailyReviewIsComplete}
@@ -578,14 +741,34 @@ ${project.starterCode.js}`,
         )}
 
         {activeNavItem === 'practice' && (
-          <CodePlayground
-            code={playgroundCode}
-            onChangeCode={updatePlaygroundCode}
-            onClearSavedCode={clearSavedPlaygroundCode}
-            onAskAiHelp={openAiHelperFromPlayground}
-            onCompletePractice={completePracticeChallenge}
-            onResetCode={resetPlaygroundCode}
-          />
+          selectedChallenge
+            ? (
+              <ChallengeDetail
+                challenge={selectedChallenge}
+                challengeFeedback={challengeFeedback}
+                challengeProgress={progress.challenges?.[selectedChallenge.id]}
+                onAskAiHelp={openAiHelperFromChallenge}
+                onBack={() => { setSelectedChallengeId(null); setChallengeFeedback(null); }}
+                onChangeCode={updateChallengeCode}
+                onCheck={checkChallenge}
+                onLoadIntoPlayground={loadChallengeIntoPlayground}
+                onResetCode={resetChallengeCode}
+              />
+            )
+            : (
+              <PracticeScreen
+                code={playgroundCode}
+                completedChallengesCount={completedChallengesCount}
+                nextChallenge={nextChallenge}
+                onAskAiHelp={openAiHelperFromPlayground}
+                onChangeCode={updatePlaygroundCode}
+                onClearSavedCode={clearSavedPlaygroundCode}
+                onCompletePractice={completePracticeChallenge}
+                onOpenChallenge={openChallenge}
+                onResetCode={resetPlaygroundCode}
+                progress={progress}
+              />
+            )
         )}
 
         {activeNavItem === 'review' && (
@@ -638,6 +821,7 @@ ${project.starterCode.js}`,
             completedBeginnerLessonsCount={completedBeginnerLessonsCount}
             completedChecklistCount={completedChecklistCount}
             completedProjectsCount={completedProjectsCount}
+            completedChallengesCount={completedChallengesCount}
             dailyReviewCompletedCount={dailyReviewCompletedCount}
             level={level}
             backupFeedback={backupFeedback}
@@ -656,7 +840,7 @@ ${project.starterCode.js}`,
 
 
 
-function ProfileScreen({ badges, backupFeedback, completedBeginnerLessonsCount, completedChecklistCount, completedProjectsCount, dailyReviewCompletedCount, level, onExportProgress, onImportProgress, progress, weakSkills }) {
+function ProfileScreen({ badges, backupFeedback, completedBeginnerLessonsCount, completedChecklistCount, completedProjectsCount, completedChallengesCount, dailyReviewCompletedCount, level, onExportProgress, onImportProgress, progress, weakSkills }) {
   return (
     <section className="checklist-card profile-screen" aria-labelledby="profile-title">
       <div className="section-heading profile-heading">
@@ -672,6 +856,7 @@ function ProfileScreen({ badges, backupFeedback, completedBeginnerLessonsCount, 
         <ProfileRow label="Streak" value={`${progress.streak} days`} />
         <ProfileRow label="Completed lessons" value={`${completedBeginnerLessonsCount}/${beginnerLessons.length}`} />
         <ProfileRow label="Completed projects" value={`${completedProjectsCount}/${beginnerProjects.length}`} />
+        <ProfileRow label="Completed challenges" value={`${completedChallengesCount}/${beginnerChallenges.length}`} />
         <ProfileRow label="Practice completions" value={progress.practiceCompletions ?? 0} />
         <ProfileRow label="AI Helper uses" value={progress.aiHelperUses ?? 0} />
         <ProfileRow label="Review cards completed" value={progress.review?.totalCompleted ?? 0} />
@@ -794,6 +979,39 @@ function ReviewScreen({ dailyReviewCompletedCount, dailyReviewIsComplete, onAnsw
       </div>
 
       <WeakSkillsPanel onAskAiHelp={onAskAiHelp} weakSkills={weakSkills} />
+    </section>
+  );
+}
+
+function HomeChallengeCard({ completedChallengesCount, nextChallenge, onOpenChallenge }) {
+  if (!nextChallenge) {
+    return (
+      <section className="lesson-card current-project-card" aria-labelledby="next-challenge-title">
+        <div className="section-heading">
+          <p className="eyebrow">Next challenge</p>
+          <span>{completedChallengesCount}/{beginnerChallenges.length}</span>
+        </div>
+        <h2 id="next-challenge-title">All challenges complete!</h2>
+        <p>You finished every beginner challenge. Revisit Practice to redo one or ask AI Helper for a similar challenge.</p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="lesson-card current-project-card" aria-labelledby="next-challenge-title">
+      <div className="section-heading">
+        <p className="eyebrow">Next challenge</p>
+        <span>+{nextChallenge.xpReward} XP</span>
+      </div>
+      <h2 id="next-challenge-title">{nextChallenge.title}</h2>
+      <p>{nextChallenge.instructions}</p>
+      <div className="lesson-meta">
+        <span>{nextChallenge.difficulty}</span>
+        <span>{nextChallenge.estimatedTime}</span>
+      </div>
+      <button className="primary-button" type="button" onClick={() => onOpenChallenge(nextChallenge)}>
+        Start challenge
+      </button>
     </section>
   );
 }
@@ -1012,6 +1230,189 @@ function PromptInput({ helper, isCode = false, isLarge = false, label, onChange,
   );
 }
 
+
+function PracticeScreen({ code, completedChallengesCount, nextChallenge, onAskAiHelp, onChangeCode, onClearSavedCode, onCompletePractice, onOpenChallenge, onResetCode, progress }) {
+  return (
+    <>
+      <ChallengesPanel
+        completedChallengesCount={completedChallengesCount}
+        nextChallenge={nextChallenge}
+        onOpenChallenge={onOpenChallenge}
+        progress={progress}
+      />
+      <CodePlayground
+        code={code}
+        onAskAiHelp={onAskAiHelp}
+        onChangeCode={onChangeCode}
+        onClearSavedCode={onClearSavedCode}
+        onCompletePractice={onCompletePractice}
+        onResetCode={onResetCode}
+      />
+    </>
+  );
+}
+
+function ChallengesPanel({ completedChallengesCount, nextChallenge, onOpenChallenge, progress }) {
+  return (
+    <section className="lesson-card challenges-screen" aria-labelledby="challenges-title">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">Challenges</p>
+          <h2 id="challenges-title">Beginner coding challenges</h2>
+        </div>
+        <span>{completedChallengesCount}/{beginnerChallenges.length}</span>
+      </div>
+      <p>Practise tiny tasks with instant, friendly auto-checking. Challenge work is saved separately from the regular Playground.</p>
+      {nextChallenge && (
+        <div className="starter-challenge challenge-next-card">
+          <strong>Next up: {nextChallenge.title}</strong>
+          <p>{nextChallenge.instructions}</p>
+          <button className="secondary-button" type="button" onClick={() => onOpenChallenge(nextChallenge)}>
+            Open next challenge
+          </button>
+        </div>
+      )}
+      <div className="challenge-grid">
+        {beginnerChallenges.map((challenge, index) => {
+          const status = getChallengeStatus(challenge.id, progress.challenges);
+          const savedChallenge = progress.challenges?.[challenge.id] ?? {};
+
+          return (
+            <button
+              className={`challenge-card ${status}`}
+              disabled={status === 'locked'}
+              key={challenge.id}
+              onClick={() => onOpenChallenge(challenge)}
+              type="button"
+            >
+              <span className="project-card-topline">
+                <strong>{index + 1}. {challenge.title}</strong>
+                <small>{getChallengeStatusLabel(status)}</small>
+              </span>
+              <span>{challenge.instructions}</span>
+              <span className="project-meta lesson-meta">
+                <small>{challenge.difficulty}</small>
+                <small>{challenge.estimatedTime}</small>
+                <small>+{challenge.xpReward} XP</small>
+              </span>
+              <span className="challenge-tags">{challenge.skillTags.join(' • ')}</span>
+              {savedChallenge.attempts > 0 && <span className="challenge-attempts">Checked {savedChallenge.attempts} {savedChallenge.attempts === 1 ? 'time' : 'times'}</span>}
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function ChallengeDetail({ challenge, challengeFeedback, challengeProgress = {}, onAskAiHelp, onBack, onChangeCode, onCheck, onLoadIntoPlayground, onResetCode }) {
+  const code = {
+    ...getChallengeStarterCode(challenge),
+    ...(challengeProgress.code ?? {}),
+  };
+  const previewDocument = buildPreviewDocument(code);
+  const isCompleted = challengeProgress.status === 'completed';
+
+  return (
+    <article className="lesson-card challenge-detail" aria-labelledby="challenge-detail-title">
+      <button className="back-button" type="button" onClick={onBack}>← Back to Practice</button>
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">Challenge</p>
+          <h2 id="challenge-detail-title">{challenge.title}</h2>
+        </div>
+        <span>{getChallengeStatusLabel(isCompleted ? 'completed' : challengeProgress.status ?? 'unlocked')}</span>
+      </div>
+      <p>{challenge.instructions}</p>
+      <div className="lesson-meta">
+        <span>{challenge.difficulty}</span>
+        <span>{challenge.estimatedTime}</span>
+        <span>+{challenge.xpReward} XP</span>
+        {challenge.skillTags.map((tag) => <span key={tag}>{tag}</span>)}
+      </div>
+
+      <div className="starter-challenge">
+        <strong>Success criteria</strong>
+        <ul className="challenge-criteria-list">
+          {challenge.successCriteria.map((criterion) => <li key={criterion.id}>{criterion.label}</li>)}
+        </ul>
+      </div>
+
+      <div className="playground-grid">
+        <div className="editor-stack" aria-label="Challenge code editors">
+          <CodeEditor helper="HTML is the structure for this challenge." label="HTML" language="html" onChangeCode={(language, value) => onChangeCode(challenge, language, value)} value={code.html} />
+          <CodeEditor helper="CSS adds colours, spacing, and layout." label="CSS" language="css" onChangeCode={(language, value) => onChangeCode(challenge, language, value)} value={code.css} />
+          <CodeEditor helper="JavaScript adds behaviour and events." label="JavaScript" language="js" onChangeCode={(language, value) => onChangeCode(challenge, language, value)} value={code.js} />
+        </div>
+        <div className="preview-panel">
+          <div className="preview-header">
+            <strong>Challenge preview</strong>
+            <span>Runs in a sandbox</span>
+          </div>
+          <iframe className="preview-frame" sandbox="allow-scripts" srcDoc={previewDocument} title={`${challenge.title} preview`} />
+        </div>
+      </div>
+
+      {challengeFeedback && <ChallengeFeedback feedback={challengeFeedback} explanation={challenge.explanation} />}
+
+      <details className="hint-card playground-hints">
+        <summary>Need a hint?</summary>
+        <ul>{challenge.hints.map((hint) => <li key={hint}>{hint}</li>)}</ul>
+      </details>
+
+      {isCompleted && (
+        <div className="starter-challenge challenge-complete-note">
+          <strong>Completed explanation</strong>
+          <p>{challenge.explanation}</p>
+        </div>
+      )}
+
+      <div className="playground-actions challenge-actions">
+        <button className="primary-button" type="button" onClick={() => onCheck(challenge)}>
+          Check my code
+        </button>
+        <button className="secondary-button" type="button" onClick={() => onAskAiHelp(challenge, 'not-passing')}>
+          Explain why it is not passing
+        </button>
+        <button className="secondary-button" type="button" onClick={() => onAskAiHelp(challenge, 'hint')}>
+          Hint only
+        </button>
+        <button className="secondary-button" type="button" onClick={() => onAskAiHelp(challenge, 'explain')}>
+          Explain solution
+        </button>
+        <button className="secondary-button" type="button" onClick={() => onAskAiHelp(challenge, 'similar')}>
+          Similar challenge prompt
+        </button>
+        <button className="secondary-button" type="button" onClick={() => onLoadIntoPlayground(challenge)}>
+          Load into Playground
+        </button>
+        <button className="secondary-button danger-button" type="button" onClick={() => onResetCode(challenge)}>
+          Reset challenge code
+        </button>
+      </div>
+    </article>
+  );
+}
+
+function ChallengeFeedback({ feedback, explanation }) {
+  return (
+    <aside className={feedback.allPassed ? 'challenge-feedback passed' : 'challenge-feedback'} role="status">
+      <strong>{feedback.allPassed ? 'All checks passed! Great work.' : 'Nice try — here is what to improve next.'}</strong>
+      <div className="feedback-columns">
+        <div>
+          <h3>Passed</h3>
+          {feedback.passed.length ? <ul>{feedback.passed.map((item) => <li key={item.id}>{item.label}</li>)}</ul> : <p>No checks have passed yet, and that is okay. Start with the first hint.</p>}
+        </div>
+        <div>
+          <h3>Still needs work</h3>
+          {feedback.needsWork.length ? <ul>{feedback.needsWork.map((item) => <li key={item.id}>{item.label}</li>)}</ul> : <p>Nothing left to fix for this challenge.</p>}
+        </div>
+      </div>
+      <p><strong>Next hint:</strong> {feedback.nextHint}</p>
+      {feedback.allPassed && <p>{explanation}</p>}
+    </aside>
+  );
+}
 
 function CodePlayground({ code, onAskAiHelp, onChangeCode, onClearSavedCode, onCompletePractice, onResetCode }) {
   const safeCode = {
@@ -1521,6 +1922,52 @@ function getNextProject(projectId) {
   return beginnerProjects[projectIndex + 1] ?? null;
 }
 
+function getChallengeStatus(challengeId, challengeProgress = {}) {
+  const challengeIndex = beginnerChallenges.findIndex((challenge) => challenge.id === challengeId);
+  const savedStatus = challengeProgress?.[challengeId]?.status;
+
+  if (savedStatus === 'completed') return 'completed';
+  if (savedStatus === 'in-progress') return 'in-progress';
+  if (challengeIndex === 0) return savedStatus === 'in-progress' ? 'in-progress' : 'unlocked';
+
+  const previousChallenge = beginnerChallenges[challengeIndex - 1];
+  if (previousChallenge && challengeProgress?.[previousChallenge.id]?.status === 'completed') {
+    return savedStatus === 'in-progress' ? 'in-progress' : 'unlocked';
+  }
+
+  return 'locked';
+}
+
+function getChallengeStatusLabel(status) {
+  if (status === 'completed') return 'Completed ✓';
+  if (status === 'in-progress') return 'In progress';
+  if (status === 'unlocked') return 'Unlocked';
+  return 'Locked 🔒';
+}
+
+function getFirstUnlockedIncompleteChallenge(challengeProgress = {}) {
+  return beginnerChallenges.find((challenge) => {
+    const status = getChallengeStatus(challenge.id, challengeProgress);
+    return status !== 'locked' && status !== 'completed';
+  });
+}
+
+function getNextChallenge(challengeId) {
+  const challengeIndex = beginnerChallenges.findIndex((challenge) => challenge.id === challengeId);
+  return beginnerChallenges[challengeIndex + 1] ?? null;
+}
+
+function addWeakChallengeSkills(currentWeakSkills = {}, skillTags = []) {
+  return skillTags.reduce((weakSkills, skill) => ({
+    ...weakSkills,
+    [skill]: {
+      count: (weakSkills[skill]?.count ?? 0) + 1,
+      lastMarkedAt: new Date().toISOString(),
+      source: 'challenge',
+    },
+  }), currentWeakSkills ?? {});
+}
+
 function getFirstUnlockedIncompleteLesson(completedLessonIds) {
   return beginnerLessons.find((lesson) => isLessonUnlocked(lesson.id, completedLessonIds) && !completedLessonIds.includes(lesson.id));
 }
@@ -1539,8 +1986,17 @@ function getLessonStatusLabel(status) {
   return 'Locked 🔒';
 }
 
-function getWeakSkills(reviewProgress) {
-  return Object.entries(reviewProgress.weakSkills ?? {})
+function getWeakSkills(reviewProgress, weakChallengeSkills = {}) {
+  const combinedWeakSkills = { ...reviewProgress.weakSkills };
+
+  Object.entries(weakChallengeSkills ?? {}).forEach(([skill, value]) => {
+    combinedWeakSkills[skill] = {
+      count: (combinedWeakSkills[skill]?.count ?? 0) + (value.count ?? 0),
+      lastMarkedAt: value.lastMarkedAt ?? combinedWeakSkills[skill]?.lastMarkedAt ?? null,
+    };
+  });
+
+  return Object.entries(combinedWeakSkills ?? {})
     .map(([name, details]) => ({
       name,
       count: details.count ?? 0,
