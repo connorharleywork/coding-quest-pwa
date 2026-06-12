@@ -6,6 +6,8 @@ const starterProgress = {
   streak: 0,
   completedLessons: ['lesson-web-basics'],
   practiceCompletions: 0,
+  aiHelperUses: 0,
+  lastAiHelperRewardDate: null,
   lastGoalDate: null,
   todayDate: null,
   todayChecklist: {},
@@ -63,6 +65,10 @@ function migrateProgress(savedProgress) {
     practiceCompletions: Number.isFinite(savedProgress.practiceCompletions)
       ? savedProgress.practiceCompletions
       : starterProgress.practiceCompletions,
+    aiHelperUses: Number.isFinite(savedProgress.aiHelperUses)
+      ? savedProgress.aiHelperUses
+      : starterProgress.aiHelperUses,
+    lastAiHelperRewardDate: savedProgress.lastAiHelperRewardDate ?? starterProgress.lastAiHelperRewardDate,
   };
 }
 

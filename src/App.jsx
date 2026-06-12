@@ -3,11 +3,19 @@ import { BottomNav } from './components/BottomNav.jsx';
 import { StatCard } from './components/StatCard.jsx';
 import { useLocalStorage } from './hooks/useLocalStorage.js';
 import { beginnerLessons } from './data/lessons.js';
+import {
+  AI_HELPER_XP_REWARD,
+  aiPromptCategories,
+  buildAiPrompt,
+  emptyAiHelperDraft,
+  readyMadePromptTemplates,
+} from './data/aiPrompts.js';
 import { dailyChecklist } from './data/sampleData.js';
 import {
   DAILY_GOAL_COUNT,
   completeChecklistItem,
   getCompletedChecklistCount,
+  getDeviceLocalDate,
   getLevelFromXp,
   loadProgress,
   saveProgress,
@@ -18,6 +26,7 @@ const openAppChecklistItem = dailyChecklist.find((item) => item.id === 'open-app
 const readLessonChecklistItem = dailyChecklist.find((item) => item.id === 'read-lesson');
 const practiceChecklistItem = dailyChecklist.find((item) => item.id === 'solve-challenge');
 const PLAYGROUND_STORAGE_KEY = 'codequest-playground-code';
+const AI_HELPER_STORAGE_KEY = 'codequest-ai-helper-draft';
 const starterPlaygroundCode = {
   html: `<section class="mini-page">
   <h1>Hello, CodeQuest!</h1>
@@ -59,6 +68,8 @@ function App() {
   const [selectedLessonId, setSelectedLessonId] = useState(null);
   const [xpFeedback, setXpFeedback] = useState('');
   const [playgroundCode, setPlaygroundCode] = useLocalStorage(PLAYGROUND_STORAGE_KEY, starterPlaygroundCode);
+  const [aiHelperDraft, setAiHelperDraft] = useLocalStorage(AI_HELPER_STORAGE_KEY, emptyAiHelperDraft);
+  const [copyFeedback, setCopyFeedback] = useState('');
 
   const level = getLevelFromXp(progress.totalXp);
   const completedChecklistCount = getCompletedChecklistCount(progress, dailyChecklist);
@@ -204,6 +215,95 @@ function App() {
     setXpFeedback('Saved playground code cleared. The starter challenge is ready again.');
   }
 
+  function updateAiHelperDraft(updates) {
+    // The helper draft stays on this device so learners can safely return to a prompt later.
+    setAiHelperDraft((currentDraft) => ({
+      ...emptyAiHelperDraft,
+      ...currentDraft,
+      ...updates,
+    }));
+  }
+
+  function awardAiHelperXp() {
+    const today = getDeviceLocalDate();
+
+    setProgress((currentProgress) => {
+      if (currentProgress.lastAiHelperRewardDate === today) {
+        setXpFeedback('AI Helper XP is already collected today. Copy as many prompts as you want!');
+        return currentProgress;
+      }
+
+      setXpFeedback(`AI Helper used! +${AI_HELPER_XP_REWARD} XP for asking a clearer coding question.`);
+      return {
+        ...currentProgress,
+        totalXp: currentProgress.totalXp + AI_HELPER_XP_REWARD,
+        aiHelperUses: (currentProgress.aiHelperUses ?? 0) + 1,
+        lastAiHelperRewardDate: today,
+      };
+    });
+  }
+
+  function openAiHelperWithDraft(updates) {
+    const nextDraft = {
+      ...emptyAiHelperDraft,
+      ...aiHelperDraft,
+      ...updates,
+    };
+
+    updateAiHelperDraft({
+      ...updates,
+      generatedPrompt: buildAiPrompt(nextDraft),
+    });
+    setCopyFeedback('Prompt draft filled in. Review it, then copy when you are ready.');
+    setActiveNavItem('ai-helper');
+    setSelectedLessonId(null);
+  }
+
+  function openAiHelperFromPlayground() {
+    const safeCode = {
+      ...starterPlaygroundCode,
+      ...playgroundCode,
+    };
+
+    openAiHelperWithDraft({
+      categoryId: 'review-playground',
+      fileName: 'CodeQuest Code Playground',
+      buildGoal: 'I am practising a tiny HTML, CSS, and JavaScript project in CodeQuest.',
+      confusion: 'Please explain what is working, what might break, and one small improvement I can try next.',
+      code: `HTML:
+${safeCode.html}
+
+CSS:
+${safeCode.css}
+
+JavaScript:
+${safeCode.js}`,
+      errorMessage: '',
+    });
+  }
+
+  function openAiHelperFromLesson(lesson) {
+    openAiHelperWithDraft({
+      categoryId: 'lesson-help',
+      fileName: lesson.title,
+      buildGoal: `I am learning this CodeQuest lesson: ${lesson.title}.`,
+      confusion: `Topic tags: ${lesson.tags.join(', ')}. Mini task: ${lesson.miniTask}`,
+      code: lesson.codeExample ?? '',
+      errorMessage: '',
+    });
+  }
+
+  async function copyAiPrompt(prompt) {
+    try {
+      await navigator.clipboard.writeText(prompt);
+      setCopyFeedback('Copied! Paste this prompt into ChatGPT, Codex, or another AI assistant.');
+      awardAiHelperXp();
+    } catch (error) {
+      console.warn('CodeQuest could not copy the AI prompt automatically.', error);
+      setCopyFeedback('Copy did not work automatically. Select the prompt text and copy it manually.');
+    }
+  }
+
   function completeReflection() {
     const reflectionItem = dailyChecklist.find((item) => item.id === 'reflect');
     if (reflectionItem) completeItem(reflectionItem, 'Reflection saved!');
@@ -248,7 +348,15 @@ function App() {
 
         {activeNavItem === 'learn' && (
           selectedLesson
-            ? <LessonScreen lesson={selectedLesson} completedLessonIds={progress.completedLessons} onBack={() => setSelectedLessonId(null)} onComplete={completeLesson} />
+            ? (
+              <LessonScreen
+                lesson={selectedLesson}
+                completedLessonIds={progress.completedLessons}
+                onAskAiHelp={openAiHelperFromLesson}
+                onBack={() => setSelectedLessonId(null)}
+                onComplete={completeLesson}
+              />
+            )
             : <LearningPath completedLessonIds={progress.completedLessons} onOpenLesson={openLesson} />
         )}
 
@@ -257,8 +365,18 @@ function App() {
             code={playgroundCode}
             onChangeCode={updatePlaygroundCode}
             onClearSavedCode={clearSavedPlaygroundCode}
+            onAskAiHelp={openAiHelperFromPlayground}
             onCompletePractice={completePracticeChallenge}
             onResetCode={resetPlaygroundCode}
+          />
+        )}
+
+        {activeNavItem === 'ai-helper' && (
+          <AiPromptHelper
+            copyFeedback={copyFeedback}
+            draft={aiHelperDraft}
+            onCopyPrompt={copyAiPrompt}
+            onUpdateDraft={updateAiHelperDraft}
           />
         )}
 
@@ -291,6 +409,8 @@ function App() {
               <ProfileRow label="Streak" value={`${progress.streak} days`} />
               <ProfileRow label="Completed lessons" value={`${completedBeginnerLessonsCount}/${beginnerLessons.length}`} />
               <ProfileRow label="Practice completions" value={progress.practiceCompletions ?? 0} />
+              <ProfileRow label="AI Helper uses" value={progress.aiHelperUses ?? 0} />
+              <ProfileRow label="AI Helper XP today" value={progress.lastAiHelperRewardDate === getDeviceLocalDate() ? 'Collected' : `+${AI_HELPER_XP_REWARD} available`} />
               <ProfileRow label="Badges earned" value={badges.length ? badges.join(', ') : 'None yet'} />
               <ProfileRow label="Today’s checklist" value={`${completedChecklistCount}/${dailyChecklist.length} done`} />
             </div>
@@ -304,7 +424,155 @@ function App() {
 }
 
 
-function CodePlayground({ code, onChangeCode, onClearSavedCode, onCompletePractice, onResetCode }) {
+function AiPromptHelper({ copyFeedback, draft, onCopyPrompt, onUpdateDraft }) {
+  const safeDraft = {
+    ...emptyAiHelperDraft,
+    ...draft,
+  };
+  const generatedPrompt = buildAiPrompt(safeDraft);
+
+  function handleFieldChange(field, value) {
+    const nextDraft = {
+      ...safeDraft,
+      [field]: value,
+    };
+
+    onUpdateDraft({
+      [field]: value,
+      generatedPrompt: buildAiPrompt(nextDraft),
+    });
+  }
+
+  function applyTemplate(template) {
+    const nextDraft = {
+      ...safeDraft,
+      categoryId: template.categoryId,
+      ...template.draft,
+    };
+
+    onUpdateDraft({
+      categoryId: template.categoryId,
+      ...template.draft,
+      generatedPrompt: buildAiPrompt(nextDraft),
+    });
+  }
+
+  return (
+    <section className="lesson-card ai-helper-card" aria-labelledby="ai-helper-title">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">AI Helper</p>
+          <h2 id="ai-helper-title">Copyable coding prompts</h2>
+        </div>
+        <span>+{AI_HELPER_XP_REWARD} XP daily</span>
+      </div>
+
+      <div className="starter-challenge ai-helper-note">
+        <strong>No API key needed</strong>
+        <p>
+          CodeQuest does not send anything automatically. It only builds a prompt you can copy and
+          paste into ChatGPT, Codex, or another AI assistant when you choose.
+        </p>
+      </div>
+
+      <div className="prompt-category-grid" aria-label="Prompt categories">
+        {aiPromptCategories.map((category) => (
+          <button
+            className={category.id === safeDraft.categoryId ? 'prompt-chip active' : 'prompt-chip'}
+            key={category.id}
+            onClick={() => handleFieldChange('categoryId', category.id)}
+            type="button"
+          >
+            <strong>{category.label}</strong>
+            <small>{category.helper}</small>
+          </button>
+        ))}
+      </div>
+
+      <div className="template-list" aria-label="Ready-made prompt templates">
+        <div className="section-heading compact-heading">
+          <strong>Ready-made templates</strong>
+          <span>Beginner shortcuts</span>
+        </div>
+        {readyMadePromptTemplates.map((template) => (
+          <button className="template-card" key={template.id} onClick={() => applyTemplate(template)} type="button">
+            <span>
+              <strong>{template.title}</strong>
+              <small>{template.description}</small>
+            </span>
+            <span aria-hidden="true">✨</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="ai-helper-form">
+        <PromptInput
+          helper="Example: src/App.jsx, Code Playground, or the lesson title."
+          label="File name, lesson, or topic"
+          onChange={(value) => handleFieldChange('fileName', value)}
+          value={safeDraft.fileName}
+        />
+        <PromptInput
+          helper="Example: I am trying to make a button show a message."
+          label="What are you trying to build?"
+          onChange={(value) => handleFieldChange('buildGoal', value)}
+          value={safeDraft.buildGoal}
+        />
+        <PromptInput
+          helper="Example: I do not understand why useState updates the screen."
+          label="What do you not understand?"
+          onChange={(value) => handleFieldChange('confusion', value)}
+          value={safeDraft.confusion}
+        />
+        <PromptInput
+          helper="Paste the exact red error text if you have one."
+          label="Error message"
+          onChange={(value) => handleFieldChange('errorMessage', value)}
+          value={safeDraft.errorMessage}
+          isLarge
+        />
+        <PromptInput
+          helper="Paste code, playground HTML/CSS/JS, or notes. Nothing leaves this device from CodeQuest."
+          label="Code or notes"
+          onChange={(value) => handleFieldChange('code', value)}
+          value={safeDraft.code}
+          isCode
+          isLarge
+        />
+      </div>
+
+      <label className="generated-prompt">
+        <span>Generated prompt</span>
+        <textarea readOnly value={generatedPrompt} />
+      </label>
+
+      <button className="primary-button" type="button" onClick={() => onCopyPrompt(generatedPrompt)}>
+        Copy Prompt
+      </button>
+      {copyFeedback && <p className="celebration" role="status">{copyFeedback}</p>}
+    </section>
+  );
+}
+
+function PromptInput({ helper, isCode = false, isLarge = false, label, onChange, value }) {
+  return (
+    <label className={isCode ? 'code-editor prompt-input' : 'prompt-input'}>
+      <span>{label}</span>
+      <small>{helper}</small>
+      <textarea
+        autoCapitalize={isCode ? 'off' : 'sentences'}
+        autoCorrect={isCode ? 'off' : 'on'}
+        className={isLarge ? 'large-input' : undefined}
+        spellCheck={isCode ? 'false' : 'true'}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </label>
+  );
+}
+
+
+function CodePlayground({ code, onAskAiHelp, onChangeCode, onClearSavedCode, onCompletePractice, onResetCode }) {
   const safeCode = {
     ...starterPlaygroundCode,
     ...code,
@@ -381,6 +649,9 @@ function CodePlayground({ code, onChangeCode, onClearSavedCode, onCompletePracti
       <div className="playground-actions">
         <button className="primary-button" type="button" onClick={onCompletePractice}>
           Complete practice
+        </button>
+        <button className="secondary-button" type="button" onClick={onAskAiHelp}>
+          Get AI help with this code
         </button>
         <button className="secondary-button" type="button" onClick={onResetCode}>
           Reset starter code
@@ -513,7 +784,7 @@ function LearningPath({ completedLessonIds, onOpenLesson }) {
   );
 }
 
-function LessonScreen({ lesson, completedLessonIds, onBack, onComplete }) {
+function LessonScreen({ lesson, completedLessonIds, onAskAiHelp, onBack, onComplete }) {
   const isComplete = completedLessonIds.includes(lesson.id);
 
   return (
@@ -557,9 +828,14 @@ function LessonScreen({ lesson, completedLessonIds, onBack, onComplete }) {
         <p>{lesson.hint}</p>
       </details>
 
-      <button className="primary-button" type="button" onClick={() => onComplete(lesson)}>
-        {isComplete ? 'Lesson complete ✓' : `Complete lesson for ${lesson.xpReward} XP`}
-      </button>
+      <div className="lesson-actions">
+        <button className="primary-button" type="button" onClick={() => onComplete(lesson)}>
+          {isComplete ? 'Lesson complete ✓' : `Complete lesson for ${lesson.xpReward} XP`}
+        </button>
+        <button className="secondary-button" type="button" onClick={() => onAskAiHelp(lesson)}>
+          Ask AI to explain this lesson
+        </button>
+      </div>
     </article>
   );
 }
