@@ -14,6 +14,8 @@ const starterProgress = {
     todayCompletedCount: 0,
     lastDailyRewardDate: null,
   },
+  challenges: {},
+  weakChallengeSkills: {},
   practiceCompletions: 0,
   aiHelperUses: 0,
   lastAiHelperRewardDate: null,
@@ -87,6 +89,8 @@ function migrateProgress(savedProgress) {
       : starterProgress.completedLessons,
     todayChecklist: savedProgress.todayChecklist ?? savedProgress.checklist ?? starterProgress.todayChecklist,
     projects: savedProgress.projects && typeof savedProgress.projects === 'object' ? savedProgress.projects : starterProgress.projects,
+    challenges: savedProgress.challenges && typeof savedProgress.challenges === 'object' ? savedProgress.challenges : starterProgress.challenges,
+    weakChallengeSkills: savedProgress.weakChallengeSkills && typeof savedProgress.weakChallengeSkills === 'object' ? savedProgress.weakChallengeSkills : starterProgress.weakChallengeSkills,
     review: migrateReviewProgress(savedProgress.review),
     todayAwardedChecklist: savedProgress.todayAwardedChecklist ?? {},
     practiceCompletions: Number.isFinite(savedProgress.practiceCompletions)

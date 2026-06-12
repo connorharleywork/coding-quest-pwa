@@ -277,7 +277,7 @@ h2 {
   bottom: calc(0.75rem + env(safe-area-inset-bottom));
   left: 0.75rem;
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(7, 1fr);
   gap: 0.25rem;
   max-width: 42rem;
   margin: 0 auto;
@@ -1294,5 +1294,131 @@ h2 {
   .bottom-nav button {
     border-radius: 16px;
     font-size: 0.5rem;
+  }
+}
+
+.challenges-screen,
+.challenge-detail {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 1rem;
+}
+
+.challenge-grid {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+}
+
+.challenge-card {
+  display: grid;
+  gap: 0.75rem;
+  min-height: 13rem;
+  width: 100%;
+  border: 1px solid #ececff;
+  border-radius: 22px;
+  background: #ffffff;
+  color: #272c5f;
+  padding: 1rem;
+  text-align: left;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.challenge-card:not(:disabled):hover,
+.challenge-card:not(:disabled):focus-visible {
+  border-color: rgba(109, 93, 252, 0.35);
+  box-shadow: 0 16px 30px rgba(59, 54, 138, 0.12);
+  transform: translateY(-2px);
+}
+
+.challenge-card:disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
+}
+
+.challenge-card.completed,
+.challenge-feedback.passed,
+.challenge-complete-note {
+  border-color: rgba(32, 199, 185, 0.36);
+  background: #f0fffc;
+}
+
+.challenge-card.locked {
+  background: #f7f7fc;
+}
+
+.challenge-card.in-progress,
+.challenge-feedback {
+  border-color: rgba(255, 190, 80, 0.5);
+  background: #fffaf0;
+}
+
+.challenge-tags,
+.challenge-attempts {
+  color: #6f7393;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.challenge-next-card {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.challenge-next-card .secondary-button {
+  justify-self: start;
+  width: auto;
+  min-width: 12rem;
+  padding: 0 1rem;
+}
+
+.challenge-criteria-list,
+.challenge-feedback ul {
+  margin: 0.75rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.challenge-feedback {
+  display: grid;
+  gap: 1rem;
+  border: 1px solid rgba(255, 190, 80, 0.5);
+  border-radius: 20px;
+  padding: 1rem;
+}
+
+.challenge-feedback h3 {
+  margin: 0 0 0.5rem;
+  color: #272c5f;
+  font-size: 1rem;
+}
+
+.challenge-feedback p {
+  margin-bottom: 0;
+}
+
+.feedback-columns {
+  display: grid;
+  gap: 1rem;
+}
+
+.challenge-actions {
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 760px) {
+  .feedback-columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .challenge-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .challenge-actions .primary-button {
+    grid-column: span 3;
   }
 }
