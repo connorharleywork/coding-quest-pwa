@@ -91,6 +91,10 @@ export function normalizeProgressForToday(progress, today = getDeviceLocalDate()
   };
 }
 
+export function prepareImportedProgress(progressObject) {
+  return normalizeProgressForToday(migrateProgress(progressObject));
+}
+
 export function loadProgress() {
   return normalizeProgressForToday(migrateProgress(readSavedProgress()));
 }

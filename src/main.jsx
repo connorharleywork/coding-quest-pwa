@@ -13,7 +13,7 @@ createRoot(document.getElementById('root')).render(
 // stay simple while the installed app can still cache its shell locally.
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch((error) => {
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch((error) => {
       console.warn('CodeQuest service worker registration failed.', error);
     });
   });

@@ -19,6 +19,7 @@ import {
   getDeviceLocalDate,
   getLevelFromXp,
   loadProgress,
+  prepareImportedProgress,
   saveProgress,
   setChecklistItemCompletion,
 } from './utils/progress.js';
@@ -28,6 +29,7 @@ const readLessonChecklistItem = dailyChecklist.find((item) => item.id === 'read-
 const practiceChecklistItem = dailyChecklist.find((item) => item.id === 'solve-challenge');
 const PLAYGROUND_STORAGE_KEY = 'codequest-playground-code';
 const AI_HELPER_STORAGE_KEY = 'codequest-ai-helper-draft';
+const BACKUP_SCHEMA_VERSION = 1;
 const starterPlaygroundCode = {
   html: `<section class="mini-page">
   <h1>Hello, CodeQuest!</h1>
@@ -72,6 +74,7 @@ function App() {
   const [playgroundCode, setPlaygroundCode] = useLocalStorage(PLAYGROUND_STORAGE_KEY, starterPlaygroundCode);
   const [aiHelperDraft, setAiHelperDraft] = useLocalStorage(AI_HELPER_STORAGE_KEY, emptyAiHelperDraft);
   const [copyFeedback, setCopyFeedback] = useState('');
+  const [backupFeedback, setBackupFeedback] = useState('');
 
   const level = getLevelFromXp(progress.totalXp);
   const completedChecklistCount = getCompletedChecklistCount(progress, dailyChecklist);
@@ -218,6 +221,57 @@ function App() {
 
     setPlaygroundCode(starterPlaygroundCode);
     setXpFeedback('Saved playground code cleared. The starter challenge is ready again.');
+  }
+
+  function exportProgressBackup() {
+    const backup = {
+      app: 'CodeQuest',
+      schemaVersion: BACKUP_SCHEMA_VERSION,
+      exportedAt: new Date().toISOString(),
+      progress,
+      playgroundCode,
+      aiHelperDraft,
+    };
+    const backupBlob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const backupUrl = URL.createObjectURL(backupBlob);
+    const downloadLink = document.createElement('a');
+
+    downloadLink.href = backupUrl;
+    downloadLink.download = `codequest-progress-${getDeviceLocalDate()}.json`;
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    downloadLink.remove();
+    URL.revokeObjectURL(backupUrl);
+
+    setBackupFeedback('Progress backup downloaded. Keep the JSON file somewhere safe.');
+  }
+
+  async function importProgressBackup(file) {
+    if (!file) return;
+
+    try {
+      const backupText = await file.text();
+      const backup = JSON.parse(backupText);
+
+      if (!backup || backup.app !== 'CodeQuest' || !backup.progress || typeof backup.progress !== 'object') {
+        throw new Error('Invalid CodeQuest backup file.');
+      }
+
+      setProgress(prepareImportedProgress(backup.progress));
+
+      if (backup.playgroundCode && typeof backup.playgroundCode === 'object') {
+        setPlaygroundCode({ ...starterPlaygroundCode, ...backup.playgroundCode });
+      }
+
+      if (backup.aiHelperDraft && typeof backup.aiHelperDraft === 'object') {
+        setAiHelperDraft({ ...emptyAiHelperDraft, ...backup.aiHelperDraft });
+      }
+
+      setBackupFeedback('Progress restored! Your XP, streak, lessons, projects, prompts, and playground draft were imported.');
+    } catch (error) {
+      console.warn('CodeQuest could not import the progress backup.', error);
+      setBackupFeedback('Import failed. Please choose a CodeQuest JSON backup file.');
+    }
   }
 
   function updateAiHelperDraft(updates) {
@@ -528,6 +582,9 @@ ${project.starterCode.js}`,
             completedChecklistCount={completedChecklistCount}
             completedProjectsCount={completedProjectsCount}
             level={level}
+            backupFeedback={backupFeedback}
+            onExportProgress={exportProgressBackup}
+            onImportProgress={importProgressBackup}
             progress={progress}
           />
         )}
@@ -540,7 +597,7 @@ ${project.starterCode.js}`,
 
 
 
-function ProfileScreen({ badges, completedBeginnerLessonsCount, completedChecklistCount, completedProjectsCount, level, progress }) {
+function ProfileScreen({ badges, backupFeedback, completedBeginnerLessonsCount, completedChecklistCount, completedProjectsCount, level, onExportProgress, onImportProgress, progress }) {
   return (
     <section className="checklist-card profile-screen" aria-labelledby="profile-title">
       <div className="section-heading profile-heading">
@@ -562,8 +619,42 @@ function ProfileScreen({ badges, completedBeginnerLessonsCount, completedCheckli
         <ProfileRow label="Badges earned" value={badges.length ? badges.join(', ') : 'None yet'} />
         <ProfileRow label="Today’s checklist" value={`${completedChecklistCount}/${dailyChecklist.length} done`} />
       </div>
+      <BackupRestoreCard backupFeedback={backupFeedback} onExportProgress={onExportProgress} onImportProgress={onImportProgress} />
       <InstallGuide />
     </section>
+  );
+}
+
+function BackupRestoreCard({ backupFeedback, onExportProgress, onImportProgress }) {
+  return (
+    <aside className="backup-card" aria-labelledby="backup-title">
+      <div>
+        <p className="eyebrow">Backup</p>
+        <h3 id="backup-title">Move your progress safely</h3>
+        <p>
+          Export a JSON backup before switching browsers or moving between localhost and the GitHub Pages site.
+          Those locations can have separate browser storage, so one may not automatically see the other’s XP.
+        </p>
+      </div>
+      <div className="backup-actions">
+        <button className="secondary-button" type="button" onClick={onExportProgress}>
+          Export progress JSON
+        </button>
+        <label className="import-button" htmlFor="progress-backup-file">
+          Import progress JSON
+          <input
+            accept="application/json,.json"
+            id="progress-backup-file"
+            onChange={(event) => {
+              onImportProgress(event.target.files?.[0]);
+              event.target.value = '';
+            }}
+            type="file"
+          />
+        </label>
+      </div>
+      {backupFeedback && <p className="backup-feedback" role="status">{backupFeedback}</p>}
+    </aside>
   );
 }
 
