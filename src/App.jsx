@@ -43,23 +43,26 @@ const starterPlaygroundCode = {
   <p id="message" aria-live="polite"></p>
 </section>`,
   css: `.mini-page {
-  font-family: Arial, sans-serif;
+  font-family: Consolas, "Courier New", monospace;
   text-align: center;
   padding: 24px;
-  color: #272c5f;
+  color: #7CFF6B;
+  background: #050807;
+  border: 1px solid rgba(124, 255, 107, 0.35);
+  border-radius: 18px;
 }
 
 button {
   border: 0;
   border-radius: 14px;
   padding: 12px 18px;
-  color: white;
-  background: #6d5dfc;
+  color: #041007;
+  background: #7CFF6B;
   font-weight: bold;
 }
 
 #message {
-  color: #0f8f84;
+  color: #D9B76E;
   font-weight: bold;
 }`,
   js: `const button = document.querySelector('#quest-button');

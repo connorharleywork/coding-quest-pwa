@@ -1422,3 +1422,340 @@ h2 {
     grid-column: span 3;
   }
 }
+
+/* Premium terminal theme */
+:root {
+  color: #d7ffd2;
+  background: #030504;
+  font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, "Liberation Mono", "Courier New", monospace;
+  --cq-bg: #030504;
+  --cq-panel: rgba(7, 15, 11, 0.9);
+  --cq-panel-strong: rgba(10, 24, 16, 0.94);
+  --cq-panel-soft: rgba(12, 35, 22, 0.72);
+  --cq-line: rgba(124, 255, 107, 0.22);
+  --cq-line-strong: rgba(124, 255, 107, 0.45);
+  --cq-green: #7cff6b;
+  --cq-green-soft: #b5ffad;
+  --cq-muted: #7cae7c;
+  --cq-gold: #d9b76e;
+  --cq-danger: #ff6f6f;
+  --cq-shadow: 0 28px 70px rgba(0, 0, 0, 0.58), 0 0 42px rgba(124, 255, 107, 0.08);
+}
+
+body {
+  color: #d7ffd2;
+  background:
+    radial-gradient(circle at 15% -10%, rgba(124, 255, 107, 0.16), transparent 24rem),
+    radial-gradient(circle at 88% 8%, rgba(217, 183, 110, 0.14), transparent 22rem),
+    linear-gradient(135deg, rgba(124, 255, 107, 0.035) 25%, transparent 25%) 0 0 / 18px 18px,
+    linear-gradient(180deg, #030504 0%, #07110b 52%, #020302 100%);
+}
+
+body::before {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  content: "";
+  background: repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 4px);
+  mix-blend-mode: screen;
+  opacity: 0.38;
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
+.app-shell {
+  position: relative;
+}
+
+.hero-card,
+.lesson-card,
+.checklist-card,
+.stat-card,
+.code-example,
+.mini-task,
+.quiz-card,
+.hint-card,
+.path-card,
+.starter-challenge,
+.preview-panel,
+.prompt-chip,
+.template-card,
+.project-card,
+.install-card,
+.backup-card,
+.review-card,
+.weak-skills-card,
+.weak-skill-item,
+.challenge-card,
+.challenge-feedback,
+.challenge-complete-note,
+.challenge-next-card {
+  border: 1px solid var(--cq-line);
+  background: linear-gradient(145deg, rgba(11, 24, 16, 0.94), rgba(4, 9, 6, 0.92));
+  box-shadow: var(--cq-shadow);
+  color: #d7ffd2;
+}
+
+.hero-card {
+  position: relative;
+  isolation: isolate;
+  border-color: rgba(217, 183, 110, 0.34);
+  color: var(--cq-green-soft);
+  background:
+    linear-gradient(135deg, rgba(5, 10, 7, 0.94), rgba(10, 30, 18, 0.88)),
+    radial-gradient(circle at 82% 8%, rgba(217, 183, 110, 0.22), transparent 12rem);
+}
+
+.hero-card::before {
+  position: absolute;
+  inset: 1rem;
+  z-index: -1;
+  border: 1px solid rgba(124, 255, 107, 0.12);
+  border-radius: 22px;
+  content: "";
+}
+
+.hero-card::after {
+  position: absolute;
+  right: 1.35rem;
+  bottom: 1.1rem;
+  color: rgba(124, 255, 107, 0.18);
+  content: "</>";
+  font-size: clamp(3rem, 15vw, 8rem);
+  font-weight: 900;
+  line-height: 1;
+}
+
+.eyebrow,
+h1,
+h2,
+.stat-card strong,
+.path-copy strong,
+.code-example strong,
+.mini-task strong,
+.starter-challenge strong,
+.preview-header strong,
+.code-editor span,
+.prompt-chip strong,
+.template-card strong,
+.prompt-input span,
+.generated-prompt span,
+.compact-heading strong,
+.project-card-topline strong,
+.project-section h3,
+.install-card h3,
+.backup-card h3,
+.review-card h3,
+.weak-skills-card h3,
+.weak-skill-item strong,
+.challenge-feedback h3 {
+  color: var(--cq-green);
+  text-shadow: 0 0 18px rgba(124, 255, 107, 0.18);
+}
+
+h1 {
+  letter-spacing: -0.06em;
+}
+
+.hero-copy,
+.stat-card span,
+.stat-card small,
+.lesson-card p,
+.checklist-item small,
+.path-copy small,
+.path-status,
+.code-editor small,
+.preview-header span,
+.prompt-chip small,
+.template-card small,
+.prompt-input small,
+.project-card > span:not(.project-card-topline):not(.project-meta),
+.project-section ol,
+.hint-card ul,
+.install-card ol,
+.weak-skill-item ul,
+.challenge-tags,
+.challenge-attempts {
+  color: var(--cq-muted);
+}
+
+.hero-badge,
+.section-heading > span,
+.section-heading > strong,
+.lesson-meta span,
+.path-step,
+.path-status,
+.project-card-topline small,
+.review-card-footer small,
+.weak-skill-item small,
+.playground-hints code {
+  border: 1px solid rgba(217, 183, 110, 0.28);
+  background: rgba(217, 183, 110, 0.09);
+  color: var(--cq-gold);
+}
+
+.progress-track {
+  border: 1px solid rgba(124, 255, 107, 0.12);
+  background: rgba(2, 7, 4, 0.92);
+}
+
+.progress-track span {
+  background: linear-gradient(90deg, var(--cq-green), var(--cq-gold));
+  box-shadow: 0 0 18px rgba(124, 255, 107, 0.35);
+}
+
+.primary-button,
+.secondary-button,
+.back-button,
+.import-button {
+  border: 1px solid rgba(124, 255, 107, 0.28);
+  color: #041007;
+  background: linear-gradient(135deg, var(--cq-green), #bfff91);
+  box-shadow: 0 18px 34px rgba(124, 255, 107, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.secondary-button,
+.back-button,
+.import-button {
+  color: var(--cq-green);
+  background: rgba(5, 14, 8, 0.86);
+}
+
+.danger-button {
+  border-color: rgba(255, 111, 111, 0.35);
+  color: var(--cq-danger);
+}
+
+.primary-button:hover,
+.primary-button:focus-visible,
+.secondary-button:hover,
+.secondary-button:focus-visible,
+.back-button:hover,
+.back-button:focus-visible,
+.import-button:hover,
+.import-button:focus-visible,
+.path-card:not(:disabled):hover,
+.path-card:not(:disabled):focus-visible,
+.prompt-chip:hover,
+.prompt-chip:focus-visible,
+.template-card:hover,
+.template-card:focus-visible,
+.project-card:not(:disabled):hover,
+.project-card:not(:disabled):focus-visible,
+.challenge-card:not(:disabled):hover,
+.challenge-card:not(:disabled):focus-visible {
+  border-color: var(--cq-line-strong);
+  box-shadow: 0 22px 44px rgba(0, 0, 0, 0.5), 0 0 28px rgba(124, 255, 107, 0.15);
+}
+
+.checklist-item,
+.code-editor textarea,
+.prompt-input textarea,
+.generated-prompt textarea,
+.code-example pre {
+  border: 1px solid rgba(124, 255, 107, 0.24);
+  background: #020604;
+  color: var(--cq-green-soft);
+  box-shadow: inset 0 0 24px rgba(124, 255, 107, 0.035);
+}
+
+.code-editor textarea,
+.prompt-input.code-editor textarea,
+.generated-prompt textarea,
+.code-example code {
+  color: var(--cq-green);
+  text-shadow: 0 0 10px rgba(124, 255, 107, 0.18);
+}
+
+.code-editor textarea:focus,
+.prompt-input textarea:focus,
+.generated-prompt textarea:focus {
+  border-color: var(--cq-green);
+  box-shadow: 0 0 0 4px rgba(124, 255, 107, 0.12), inset 0 0 24px rgba(124, 255, 107, 0.04);
+}
+
+.preview-header,
+.bottom-nav {
+  border-color: var(--cq-line);
+  background: rgba(3, 8, 5, 0.9);
+  box-shadow: 0 22px 54px rgba(0, 0, 0, 0.58), 0 0 26px rgba(124, 255, 107, 0.08);
+}
+
+.preview-frame {
+  background: #050807;
+}
+
+.bottom-nav button {
+  color: var(--cq-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.bottom-nav button.active {
+  color: var(--cq-green);
+  background: linear-gradient(180deg, rgba(124, 255, 107, 0.14), rgba(217, 183, 110, 0.08));
+  box-shadow: inset 0 0 0 1px rgba(124, 255, 107, 0.18), 0 0 18px rgba(124, 255, 107, 0.1);
+}
+
+.path-card.completed,
+.project-card.completed,
+.challenge-card.completed,
+.challenge-feedback.passed,
+.challenge-complete-note,
+.backup-feedback {
+  border-color: rgba(124, 255, 107, 0.42);
+  background: linear-gradient(145deg, rgba(10, 38, 21, 0.94), rgba(3, 10, 6, 0.94));
+  color: var(--cq-green-soft);
+}
+
+.path-card.locked,
+.project-card.locked,
+.challenge-card.locked {
+  background: linear-gradient(145deg, rgba(9, 13, 10, 0.88), rgba(3, 5, 4, 0.92));
+  opacity: 0.72;
+}
+
+.project-card.in-progress,
+.challenge-card.in-progress,
+.challenge-feedback,
+.review-card.needs-practice,
+.friendly-warning,
+.celebration {
+  border: 1px solid rgba(217, 183, 110, 0.32);
+  background: linear-gradient(145deg, rgba(34, 27, 10, 0.9), rgba(8, 8, 4, 0.92));
+  color: #ffe7a3;
+}
+
+.checklist-item input {
+  accent-color: var(--cq-green);
+}
+
+::selection {
+  color: #020604;
+  background: var(--cq-green);
+}
+
+.quiz-card summary,
+.hint-card summary,
+.correct-answer,
+.backup-feedback,
+.challenge-feedback p,
+.challenge-criteria-list,
+.challenge-feedback ul {
+  color: var(--cq-green-soft);
+}
+
+.preview-panel,
+.checklist-card,
+.lesson-card,
+.stat-card {
+  backdrop-filter: blur(22px);
+}
