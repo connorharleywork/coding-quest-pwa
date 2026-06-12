@@ -4,6 +4,7 @@ import { StatCard } from './components/StatCard.jsx';
 import { useLocalStorage } from './hooks/useLocalStorage.js';
 import { beginnerLessons } from './data/lessons.js';
 import { beginnerProjects } from './data/projects.js';
+import { DAILY_REVIEW_GOAL, DAILY_REVIEW_XP_REWARD, reviewCards } from './data/reviewCards.js';
 import {
   AI_HELPER_XP_REWARD,
   aiPromptCategories,
@@ -18,8 +19,10 @@ import {
   getCompletedChecklistCount,
   getDeviceLocalDate,
   getLevelFromXp,
+  getReviewProgress,
   loadProgress,
   prepareImportedProgress,
+  recordReviewAnswer,
   saveProgress,
   setChecklistItemCompletion,
 } from './utils/progress.js';
@@ -86,6 +89,11 @@ function App() {
   const selectedProject = selectedProjectId ? beginnerProjects.find((project) => project.id === selectedProjectId) : null;
   const completedProjectsCount = beginnerProjects.filter((project) => progress.projects?.[project.id]?.status === 'completed').length;
   const nextProject = getFirstUnlockedIncompleteProject(progress.projects);
+  const reviewProgress = getReviewProgress(progress);
+  const weakSkills = getWeakSkills(reviewProgress);
+  const dailyReviewCompletedCount = Math.min(reviewProgress.todayCompletedCount, DAILY_REVIEW_GOAL);
+  const dailyReviewIsComplete = dailyReviewCompletedCount >= DAILY_REVIEW_GOAL;
+  const todaysReviewCards = getPrioritizedReviewCards(reviewProgress);
   const badges = useMemo(() => getEarnedBadges(progress, dailyGoalIsComplete, completedBeginnerLessonsCount, completedProjectsCount), [dailyGoalIsComplete, progress, completedBeginnerLessonsCount, completedProjectsCount]);
 
   useEffect(() => {
@@ -341,6 +349,37 @@ ${safeCode.js}`,
     });
   }
 
+  function answerReviewCard(reviewCard, result) {
+    setProgress((currentProgress) => {
+      const reviewResult = recordReviewAnswer(currentProgress, reviewCard, result, {
+        dailyGoal: DAILY_REVIEW_GOAL,
+        xpReward: DAILY_REVIEW_XP_REWARD,
+      });
+      const resultMessage = result === 'practice'
+        ? `${reviewCard.skill} saved as a weak skill. It will show up more often.`
+        : `${reviewCard.skill} marked as known. Great reviewing!`;
+      const xpMessage = reviewResult.xpEarned > 0 ? ` Daily review goal complete! +${reviewResult.xpEarned} XP.` : '';
+
+      setXpFeedback(`${resultMessage}${xpMessage}`);
+      return reviewResult.progress;
+    });
+  }
+
+  function openAiHelperForWeakSkill(skill, mode = 'explain') {
+    openAiHelperWithDraft({
+      categoryId: mode === 'challenge' ? 'practice-challenge' : 'lesson-help',
+      fileName: skill,
+      buildGoal: mode === 'challenge'
+        ? `I want a small beginner practice challenge for this weak skill: ${skill}.`
+        : `I want to understand this weak skill: ${skill}.`,
+      confusion: mode === 'challenge'
+        ? 'Please create one tiny challenge I can try in the CodeQuest Playground. Do not solve it immediately unless I ask.'
+        : 'Please explain this weak skill to me like I am a beginner. Use a simple example and one quick check question.',
+      code: '',
+      errorMessage: '',
+    });
+  }
+
   function openAiHelperFromLesson(lesson) {
     openAiHelperWithDraft({
       categoryId: 'lesson-help',
@@ -514,6 +553,12 @@ ${project.starterCode.js}`,
           <>
             <HomeLessonCard nextLesson={nextLesson} onOpenLesson={openTodaysLesson} />
             <HomeProjectCard nextProject={nextProject} onOpenProject={openProject} completedProjectsCount={completedProjectsCount} />
+            <HomeReviewCard
+              dailyReviewCompletedCount={dailyReviewCompletedCount}
+              dailyReviewIsComplete={dailyReviewIsComplete}
+              onOpenReview={() => setActiveNavItem('review')}
+              weakSkillsCount={weakSkills.length}
+            />
             {renderChecklistCard({ checklistIsComplete, completedChecklistCount, toggleChecklistItem, progress, dailyGoalIsComplete })}
           </>
         )}
@@ -540,6 +585,18 @@ ${project.starterCode.js}`,
             onAskAiHelp={openAiHelperFromPlayground}
             onCompletePractice={completePracticeChallenge}
             onResetCode={resetPlaygroundCode}
+          />
+        )}
+
+        {activeNavItem === 'review' && (
+          <ReviewScreen
+            dailyReviewCompletedCount={dailyReviewCompletedCount}
+            dailyReviewIsComplete={dailyReviewIsComplete}
+            onAnswerReviewCard={answerReviewCard}
+            onAskAiHelp={openAiHelperForWeakSkill}
+            reviewProgress={reviewProgress}
+            todaysReviewCards={todaysReviewCards}
+            weakSkills={weakSkills}
           />
         )}
 
@@ -581,11 +638,13 @@ ${project.starterCode.js}`,
             completedBeginnerLessonsCount={completedBeginnerLessonsCount}
             completedChecklistCount={completedChecklistCount}
             completedProjectsCount={completedProjectsCount}
+            dailyReviewCompletedCount={dailyReviewCompletedCount}
             level={level}
             backupFeedback={backupFeedback}
             onExportProgress={exportProgressBackup}
             onImportProgress={importProgressBackup}
             progress={progress}
+            weakSkills={weakSkills}
           />
         )}
       </main>
@@ -597,7 +656,7 @@ ${project.starterCode.js}`,
 
 
 
-function ProfileScreen({ badges, backupFeedback, completedBeginnerLessonsCount, completedChecklistCount, completedProjectsCount, level, onExportProgress, onImportProgress, progress }) {
+function ProfileScreen({ badges, backupFeedback, completedBeginnerLessonsCount, completedChecklistCount, completedProjectsCount, dailyReviewCompletedCount, level, onExportProgress, onImportProgress, progress, weakSkills }) {
   return (
     <section className="checklist-card profile-screen" aria-labelledby="profile-title">
       <div className="section-heading profile-heading">
@@ -615,12 +674,142 @@ function ProfileScreen({ badges, backupFeedback, completedBeginnerLessonsCount, 
         <ProfileRow label="Completed projects" value={`${completedProjectsCount}/${beginnerProjects.length}`} />
         <ProfileRow label="Practice completions" value={progress.practiceCompletions ?? 0} />
         <ProfileRow label="AI Helper uses" value={progress.aiHelperUses ?? 0} />
+        <ProfileRow label="Review cards completed" value={progress.review?.totalCompleted ?? 0} />
+        <ProfileRow label="Weak skills count" value={weakSkills.length} />
+        <ProfileRow label="Daily review progress" value={`${dailyReviewCompletedCount}/${DAILY_REVIEW_GOAL} cards`} />
         <ProfileRow label="AI Helper XP today" value={progress.lastAiHelperRewardDate === getDeviceLocalDate() ? 'Collected' : `+${AI_HELPER_XP_REWARD} available`} />
         <ProfileRow label="Badges earned" value={badges.length ? badges.join(', ') : 'None yet'} />
         <ProfileRow label="Today’s checklist" value={`${completedChecklistCount}/${dailyChecklist.length} done`} />
       </div>
+      <WeakSkillsPanel weakSkills={weakSkills} />
       <BackupRestoreCard backupFeedback={backupFeedback} onExportProgress={onExportProgress} onImportProgress={onImportProgress} />
       <InstallGuide />
+    </section>
+  );
+}
+
+function WeakSkillsPanel({ onAskAiHelp, weakSkills }) {
+  if (!weakSkills.length) {
+    return (
+      <aside className="weak-skills-card" aria-labelledby="weak-skills-title">
+        <div>
+          <p className="eyebrow">Weak skills</p>
+          <h3 id="weak-skills-title">No weak skills saved yet</h3>
+          <p>When a review card feels tricky, tap “I need practice” and CodeQuest will recommend next steps here.</p>
+        </div>
+      </aside>
+    );
+  }
+
+  return (
+    <aside className="weak-skills-card" aria-labelledby="weak-skills-title">
+      <div>
+        <p className="eyebrow">Weak skills</p>
+        <h3 id="weak-skills-title">Skills to revisit</h3>
+        <p>These are not failures — they are helpful signs for what to practise next.</p>
+      </div>
+      <div className="weak-skill-list">
+        {weakSkills.slice(0, 5).map((skill) => (
+          <div className="weak-skill-item" key={skill.name}>
+            <strong>{skill.name}</strong>
+            <small>Marked for practice {skill.count} {skill.count === 1 ? 'time' : 'times'}</small>
+            <ul>
+              <li>Review this skill in the Review tab.</li>
+              <li>Practise a tiny example in the Playground.</li>
+              <li>Ask AI Helper to explain it in beginner-friendly words.</li>
+            </ul>
+            {onAskAiHelp && (
+              <div className="weak-skill-actions">
+                <button className="secondary-button" type="button" onClick={() => onAskAiHelp(skill.name, 'explain')}>
+                  Explain with AI Helper
+                </button>
+                <button className="secondary-button" type="button" onClick={() => onAskAiHelp(skill.name, 'challenge')}>
+                  Make a practice challenge
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </aside>
+  );
+}
+
+function ReviewScreen({ dailyReviewCompletedCount, dailyReviewIsComplete, onAnswerReviewCard, onAskAiHelp, reviewProgress, todaysReviewCards, weakSkills }) {
+  return (
+    <section className="lesson-card review-screen" aria-labelledby="review-title">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">Review</p>
+          <h2 id="review-title">Revise weak concepts</h2>
+        </div>
+        <span>{dailyReviewCompletedCount}/{DAILY_REVIEW_GOAL} today</span>
+      </div>
+      <p>Answer a few tiny review cards. Cards you mark “I need practice” move up the list so you see them more often.</p>
+
+      <div className="starter-challenge review-goal-card">
+        <strong>Daily review goal</strong>
+        <p>Complete {DAILY_REVIEW_GOAL} review cards for +{DAILY_REVIEW_XP_REWARD} XP once per day. Refreshing will not duplicate this reward.</p>
+        <div className="progress-track" aria-label={`${dailyReviewCompletedCount} of ${DAILY_REVIEW_GOAL} review cards complete`}>
+          <span style={{ width: `${Math.min((dailyReviewCompletedCount / DAILY_REVIEW_GOAL) * 100, 100)}%` }} />
+        </div>
+        {dailyReviewIsComplete && <p className="celebration compact-celebration">Daily review complete! Come back tomorrow for another XP reward. 🧠</p>}
+      </div>
+
+      <div className="review-card-grid">
+        {todaysReviewCards.map((card) => {
+          const savedCard = reviewProgress.cards?.[card.id] ?? {};
+          const needsPractice = savedCard.lastResult === 'practice';
+
+          return (
+            <article className={needsPractice ? 'review-card needs-practice' : 'review-card'} key={card.id}>
+              <div className="section-heading compact-heading">
+                <strong>{card.skill}</strong>
+                <span>{card.difficulty}</span>
+              </div>
+              <h3>{card.question}</h3>
+              <details className="hint-card">
+                <summary>Show hint</summary>
+                <p>{card.hint}</p>
+              </details>
+              <details className="quiz-card">
+                <summary>Show simple answer</summary>
+                <p>{card.answer}</p>
+              </details>
+              <div className="review-card-footer">
+                <small>{savedCard.attempts ? `Reviewed ${savedCard.attempts} ${savedCard.attempts === 1 ? 'time' : 'times'}` : 'New review card'}</small>
+                {needsPractice && <small>Showing sooner because it needs practice</small>}
+              </div>
+              <div className="review-actions">
+                <button className="primary-button" type="button" onClick={() => onAnswerReviewCard(card, 'knew')}>
+                  I knew this
+                </button>
+                <button className="secondary-button" type="button" onClick={() => onAnswerReviewCard(card, 'practice')}>
+                  I need practice
+                </button>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+
+      <WeakSkillsPanel onAskAiHelp={onAskAiHelp} weakSkills={weakSkills} />
+    </section>
+  );
+}
+
+function HomeReviewCard({ dailyReviewCompletedCount, dailyReviewIsComplete, onOpenReview, weakSkillsCount }) {
+  return (
+    <section className="lesson-card daily-review-card" aria-labelledby="daily-review-title">
+      <div className="section-heading">
+        <p className="eyebrow">Daily review</p>
+        <span>{dailyReviewCompletedCount}/{DAILY_REVIEW_GOAL}</span>
+      </div>
+      <h2 id="daily-review-title">Keep concepts fresh</h2>
+      <p>{weakSkillsCount > 0 ? `${weakSkillsCount} weak ${weakSkillsCount === 1 ? 'skill is' : 'skills are'} ready for practice.` : 'Review tiny questions to remember what you learned.'}</p>
+      <button className="secondary-button" type="button" onClick={onOpenReview}>
+        {dailyReviewIsComplete ? 'Review again' : 'Start daily review'}
+      </button>
     </section>
   );
 }
@@ -1348,6 +1537,37 @@ function getLessonStatusLabel(status) {
   if (status === 'completed') return 'Completed ✓';
   if (status === 'unlocked') return 'Unlocked';
   return 'Locked 🔒';
+}
+
+function getWeakSkills(reviewProgress) {
+  return Object.entries(reviewProgress.weakSkills ?? {})
+    .map(([name, details]) => ({
+      name,
+      count: details.count ?? 0,
+      lastMarkedAt: details.lastMarkedAt ?? null,
+    }))
+    .filter((skill) => skill.count > 0)
+    .sort((first, second) => second.count - first.count || first.name.localeCompare(second.name));
+}
+
+function getPrioritizedReviewCards(reviewProgress) {
+  return [...reviewCards]
+    .sort((first, second) => {
+      const firstProgress = reviewProgress.cards?.[first.id] ?? {};
+      const secondProgress = reviewProgress.cards?.[second.id] ?? {};
+      const firstWeakCount = reviewProgress.weakSkills?.[first.skill]?.count ?? 0;
+      const secondWeakCount = reviewProgress.weakSkills?.[second.skill]?.count ?? 0;
+      const firstNeedsPractice = firstProgress.lastResult === 'practice' ? 1 : 0;
+      const secondNeedsPractice = secondProgress.lastResult === 'practice' ? 1 : 0;
+      const firstAttempts = firstProgress.attempts ?? 0;
+      const secondAttempts = secondProgress.attempts ?? 0;
+
+      return secondWeakCount - firstWeakCount
+        || secondNeedsPractice - firstNeedsPractice
+        || firstAttempts - secondAttempts
+        || reviewCards.findIndex((card) => card.id === first.id) - reviewCards.findIndex((card) => card.id === second.id);
+    })
+    .slice(0, 6);
 }
 
 function getEarnedBadges(progress, dailyGoalIsComplete, completedBeginnerLessonsCount, completedProjectsCount) {

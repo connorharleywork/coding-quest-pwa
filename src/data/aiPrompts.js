@@ -103,6 +103,28 @@ export const readyMadePromptTemplates = [
     },
   },
   {
+    id: 'explain-weak-skill',
+    title: 'Explain a weak skill',
+    categoryId: 'lesson-help',
+    description: 'Use this after Review marks a topic as something to practise.',
+    draft: {
+      fileName: 'My weak skill from CodeQuest Review',
+      buildGoal: 'Explain this weak skill to me like I am a beginner.',
+      confusion: 'Please use simple words, a tiny code example if helpful, and one quick check question.',
+    },
+  },
+  {
+    id: 'weak-skill-challenge',
+    title: 'Weak skill practice challenge',
+    categoryId: 'practice-challenge',
+    description: 'Ask for a small practice challenge for one review skill.',
+    draft: {
+      fileName: 'My weak skill from CodeQuest Review',
+      buildGoal: 'Create a small practice challenge for this skill.',
+      confusion: 'Please make it beginner-friendly, possible in the CodeQuest Playground, and include hints before the answer.',
+    },
+  },
+  {
     id: 'codex-safety',
     title: 'Codex safety prompt',
     categoryId: 'codex-safe-edit',

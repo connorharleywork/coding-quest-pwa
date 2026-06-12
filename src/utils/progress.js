@@ -6,6 +6,14 @@ const starterProgress = {
   streak: 0,
   completedLessons: ['lesson-web-basics'],
   projects: {},
+  review: {
+    cards: {},
+    weakSkills: {},
+    totalCompleted: 0,
+    todayDate: null,
+    todayCompletedCount: 0,
+    lastDailyRewardDate: null,
+  },
   practiceCompletions: 0,
   aiHelperUses: 0,
   lastAiHelperRewardDate: null,
@@ -48,6 +56,22 @@ export function saveProgress(progress) {
   }
 }
 
+function migrateReviewProgress(savedReview = {}) {
+  const cards = savedReview.cards && typeof savedReview.cards === 'object' ? savedReview.cards : {};
+  const weakSkills = savedReview.weakSkills && typeof savedReview.weakSkills === 'object' ? savedReview.weakSkills : {};
+
+  return {
+    ...starterProgress.review,
+    ...savedReview,
+    cards,
+    weakSkills,
+    totalCompleted: Number.isFinite(savedReview.totalCompleted) ? savedReview.totalCompleted : 0,
+    todayCompletedCount: Number.isFinite(savedReview.todayCompletedCount) ? savedReview.todayCompletedCount : 0,
+    lastDailyRewardDate: savedReview.lastDailyRewardDate ?? null,
+    todayDate: savedReview.todayDate ?? null,
+  };
+}
+
 function migrateProgress(savedProgress) {
   if (!savedProgress || typeof savedProgress !== 'object') {
     return starterProgress;
@@ -63,6 +87,7 @@ function migrateProgress(savedProgress) {
       : starterProgress.completedLessons,
     todayChecklist: savedProgress.todayChecklist ?? savedProgress.checklist ?? starterProgress.todayChecklist,
     projects: savedProgress.projects && typeof savedProgress.projects === 'object' ? savedProgress.projects : starterProgress.projects,
+    review: migrateReviewProgress(savedProgress.review),
     todayAwardedChecklist: savedProgress.todayAwardedChecklist ?? {},
     practiceCompletions: Number.isFinite(savedProgress.practiceCompletions)
       ? savedProgress.practiceCompletions
@@ -71,6 +96,17 @@ function migrateProgress(savedProgress) {
       ? savedProgress.aiHelperUses
       : starterProgress.aiHelperUses,
     lastAiHelperRewardDate: savedProgress.lastAiHelperRewardDate ?? starterProgress.lastAiHelperRewardDate,
+  };
+}
+
+function normalizeReviewForToday(reviewProgress = starterProgress.review, today = getDeviceLocalDate()) {
+  const safeReview = migrateReviewProgress(reviewProgress);
+  const isNewDay = safeReview.todayDate !== today;
+
+  return {
+    ...safeReview,
+    todayDate: today,
+    todayCompletedCount: isNewDay ? 0 : safeReview.todayCompletedCount,
   };
 }
 
@@ -87,6 +123,7 @@ export function normalizeProgressForToday(progress, today = getDeviceLocalDate()
     todayDate: today,
     todayChecklist: isNewDay ? {} : progress.todayChecklist ?? {},
     todayAwardedChecklist: isNewDay ? {} : progress.todayAwardedChecklist ?? {},
+    review: normalizeReviewForToday(progress.review, today),
     streak: missedADay ? 0 : progress.streak ?? 0,
   };
 }
@@ -151,5 +188,63 @@ export function setChecklistItemCompletion(progress, itemId, checked) {
       ...progress.todayChecklist,
       [itemId]: checked,
     },
+  };
+}
+
+export function getReviewProgress(progress, today = getDeviceLocalDate()) {
+  return normalizeReviewForToday(progress.review, today);
+}
+
+export function recordReviewAnswer(progress, reviewCard, result, { dailyGoal, xpReward, today = getDeviceLocalDate() }) {
+  const safeProgress = normalizeProgressForToday(progress, today);
+  const safeReview = safeProgress.review;
+  const previousCard = safeReview.cards[reviewCard.id] ?? {};
+  const previousSkill = safeReview.weakSkills[reviewCard.skill] ?? { count: 0 };
+  const needsPractice = result === 'practice';
+  const nextWeakSkills = {
+    ...safeReview.weakSkills,
+    [reviewCard.skill]: needsPractice
+      ? {
+          count: (previousSkill.count ?? 0) + 1,
+          lastMarkedAt: new Date().toISOString(),
+        }
+      : {
+          count: Math.max((previousSkill.count ?? 0) - 1, 0),
+          lastMarkedAt: previousSkill.lastMarkedAt ?? null,
+        },
+  };
+
+  if (!needsPractice && nextWeakSkills[reviewCard.skill].count === 0) {
+    delete nextWeakSkills[reviewCard.skill];
+  }
+
+  const nextTodayCompletedCount = safeReview.todayCompletedCount + 1;
+  const dailyGoalCompletedNow = nextTodayCompletedCount >= dailyGoal && safeReview.lastDailyRewardDate !== today;
+  const nextReview = {
+    ...safeReview,
+    cards: {
+      ...safeReview.cards,
+      [reviewCard.id]: {
+        attempts: (previousCard.attempts ?? 0) + 1,
+        knewCount: (previousCard.knewCount ?? 0) + (needsPractice ? 0 : 1),
+        practiceCount: (previousCard.practiceCount ?? 0) + (needsPractice ? 1 : 0),
+        lastResult: result,
+        lastReviewedAt: new Date().toISOString(),
+      },
+    },
+    weakSkills: nextWeakSkills,
+    totalCompleted: safeReview.totalCompleted + 1,
+    todayCompletedCount: nextTodayCompletedCount,
+    lastDailyRewardDate: dailyGoalCompletedNow ? today : safeReview.lastDailyRewardDate,
+  };
+
+  return {
+    progress: {
+      ...safeProgress,
+      totalXp: safeProgress.totalXp + (dailyGoalCompletedNow ? xpReward : 0),
+      review: nextReview,
+    },
+    dailyGoalCompletedNow,
+    xpEarned: dailyGoalCompletedNow ? xpReward : 0,
   };
 }
