@@ -522,27 +522,14 @@ ${project.starterCode.js}`,
         )}
 
         {activeNavItem === 'profile' && (
-          <section className="checklist-card" aria-labelledby="profile-title">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">Profile</p>
-                <h2 id="profile-title">Your CodeQuest progress</h2>
-              </div>
-              <strong>{completedChecklistCount}/{dailyChecklist.length}</strong>
-            </div>
-            <div className="checklist-items">
-              <ProfileRow label="Total XP" value={progress.totalXp.toLocaleString()} />
-              <ProfileRow label="Level" value={level} />
-              <ProfileRow label="Streak" value={`${progress.streak} days`} />
-              <ProfileRow label="Completed lessons" value={`${completedBeginnerLessonsCount}/${beginnerLessons.length}`} />
-              <ProfileRow label="Completed projects" value={`${completedProjectsCount}/${beginnerProjects.length}`} />
-              <ProfileRow label="Practice completions" value={progress.practiceCompletions ?? 0} />
-              <ProfileRow label="AI Helper uses" value={progress.aiHelperUses ?? 0} />
-              <ProfileRow label="AI Helper XP today" value={progress.lastAiHelperRewardDate === getDeviceLocalDate() ? 'Collected' : `+${AI_HELPER_XP_REWARD} available`} />
-              <ProfileRow label="Badges earned" value={badges.length ? badges.join(', ') : 'None yet'} />
-              <ProfileRow label="Today’s checklist" value={`${completedChecklistCount}/${dailyChecklist.length} done`} />
-            </div>
-          </section>
+          <ProfileScreen
+            badges={badges}
+            completedBeginnerLessonsCount={completedBeginnerLessonsCount}
+            completedChecklistCount={completedChecklistCount}
+            completedProjectsCount={completedProjectsCount}
+            level={level}
+            progress={progress}
+          />
         )}
       </main>
 
@@ -551,6 +538,52 @@ ${project.starterCode.js}`,
   );
 }
 
+
+
+function ProfileScreen({ badges, completedBeginnerLessonsCount, completedChecklistCount, completedProjectsCount, level, progress }) {
+  return (
+    <section className="checklist-card profile-screen" aria-labelledby="profile-title">
+      <div className="section-heading profile-heading">
+        <div>
+          <p className="eyebrow">Profile</p>
+          <h2 id="profile-title">Your CodeQuest progress</h2>
+        </div>
+        <strong>{completedChecklistCount}/{dailyChecklist.length}</strong>
+      </div>
+      <div className="profile-grid">
+        <ProfileRow label="Total XP" value={progress.totalXp.toLocaleString()} />
+        <ProfileRow label="Level" value={level} />
+        <ProfileRow label="Streak" value={`${progress.streak} days`} />
+        <ProfileRow label="Completed lessons" value={`${completedBeginnerLessonsCount}/${beginnerLessons.length}`} />
+        <ProfileRow label="Completed projects" value={`${completedProjectsCount}/${beginnerProjects.length}`} />
+        <ProfileRow label="Practice completions" value={progress.practiceCompletions ?? 0} />
+        <ProfileRow label="AI Helper uses" value={progress.aiHelperUses ?? 0} />
+        <ProfileRow label="AI Helper XP today" value={progress.lastAiHelperRewardDate === getDeviceLocalDate() ? 'Collected' : `+${AI_HELPER_XP_REWARD} available`} />
+        <ProfileRow label="Badges earned" value={badges.length ? badges.join(', ') : 'None yet'} />
+        <ProfileRow label="Today’s checklist" value={`${completedChecklistCount}/${dailyChecklist.length} done`} />
+      </div>
+      <InstallGuide />
+    </section>
+  );
+}
+
+function InstallGuide() {
+  return (
+    <aside className="install-card" aria-labelledby="install-title">
+      <div>
+        <p className="eyebrow">Install</p>
+        <h3 id="install-title">Add CodeQuest to your Home Screen</h3>
+        <p>Install once, then reopen CodeQuest like an app. Your XP, streak, lessons, projects, prompts, and playground code stay saved on this device.</p>
+      </div>
+      <ol>
+        <li>On iPhone, open CodeQuest in Safari.</li>
+        <li>Tap Share.</li>
+        <li>Tap Add to Home Screen.</li>
+        <li>Open CodeQuest from the Home Screen.</li>
+      </ol>
+    </aside>
+  );
+}
 
 function AiPromptHelper({ copyFeedback, draft, onCopyPrompt, onUpdateDraft }) {
   const safeDraft = {

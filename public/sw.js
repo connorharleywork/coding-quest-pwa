@@ -1,7 +1,14 @@
-// This tiny service worker makes the first milestone installable and gives it
-// a local-first shell. Later milestones can add smarter asset and lesson caching.
-const CACHE_NAME = 'codequest-shell-v1';
-const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icons/icon.svg'];
+// CodeQuest stays local-first: this service worker caches the app shell and
+// same-origin files after they are requested so the installed PWA can reopen
+// after the first successful load.
+const CACHE_NAME = 'codequest-shell-v3';
+const APP_SHELL = [
+  '/',
+  '/index.html',
+  '/manifest.webmanifest',
+  '/favicon.svg',
+  '/icons/codequest-icon.svg',
+];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
@@ -20,14 +27,28 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
+  const requestUrl = new URL(event.request.url);
+  if (requestUrl.origin !== self.location.origin) return;
+
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', responseToCache));
+          return networkResponse;
+        })
+        .catch(() => caches.match('/index.html'))
+    );
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) return cachedResponse;
 
       return fetch(event.request).then((networkResponse) => {
-        // Keep successful same-origin files so the installed app can reopen
-        // after assets have been requested once.
-        if (networkResponse.ok && new URL(event.request.url).origin === self.location.origin) {
+        if (networkResponse.ok) {
           const responseToCache = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
         }
