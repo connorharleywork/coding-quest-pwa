@@ -2301,3 +2301,113 @@ h1 {
     flex-basis: auto;
   }
 }
+
+.ai-buddy-shell {
+  position: fixed;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: calc(5.5rem + env(safe-area-inset-bottom));
+  z-index: 30;
+  display: grid;
+  justify-items: end;
+  gap: 0.75rem;
+  pointer-events: none;
+}
+
+.ai-buddy-button,
+.ai-buddy-panel {
+  pointer-events: auto;
+  border: 1px solid rgba(124, 255, 107, 0.42);
+  color: #dfffd9;
+  background:
+    linear-gradient(135deg, rgba(5, 12, 9, 0.98), rgba(10, 35, 20, 0.96)),
+    repeating-linear-gradient(0deg, rgba(124, 255, 107, 0.06), rgba(124, 255, 107, 0.06) 1px, transparent 1px, transparent 8px);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.35), 0 0 28px rgba(124, 255, 107, 0.16);
+}
+
+.ai-buddy-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 3.25rem;
+  padding: 0 1rem;
+  border-radius: 999px;
+  font-family: Consolas, "Courier New", monospace;
+}
+
+.ai-buddy-button span {
+  color: #7cff6b;
+  font-weight: 900;
+}
+
+.ai-buddy-panel {
+  width: min(24rem, calc(100vw - 2rem));
+  max-height: min(42rem, calc(100vh - 8rem));
+  overflow: auto;
+  padding: 1rem;
+  border-radius: 22px;
+}
+
+.ai-buddy-panel h2,
+.ai-buddy-panel p,
+.ai-buddy-panel strong,
+.ai-buddy-panel small,
+.ai-buddy-panel span {
+  color: inherit;
+}
+
+.ai-buddy-note,
+.ai-buddy-context {
+  border: 1px solid rgba(124, 255, 107, 0.22);
+  border-radius: 16px;
+  padding: 0.8rem;
+  background: rgba(124, 255, 107, 0.08);
+}
+
+.ai-buddy-context,
+.ai-buddy-actions {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0.75rem 0;
+}
+
+.ai-buddy-actions {
+  max-height: 16rem;
+  overflow: auto;
+}
+
+.ai-buddy-actions .prompt-chip {
+  text-align: left;
+  background: rgba(0, 0, 0, 0.28);
+  border-color: rgba(124, 255, 107, 0.24);
+  color: #dfffd9;
+}
+
+.ai-buddy-generated textarea {
+  min-height: 9rem;
+  color: #7cff6b;
+  background: #020503;
+  border-color: rgba(124, 255, 107, 0.3);
+}
+
+.icon-button {
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid rgba(124, 255, 107, 0.35);
+  border-radius: 999px;
+  color: #7cff6b;
+  background: rgba(0, 0, 0, 0.3);
+  font-weight: 900;
+}
+
+@media (max-width: 640px) {
+  .ai-buddy-shell {
+    right: 0.75rem;
+    left: 0.75rem;
+    bottom: calc(5.25rem + env(safe-area-inset-bottom));
+  }
+
+  .ai-buddy-panel {
+    width: 100%;
+    max-height: min(36rem, calc(100vh - 7.25rem));
+  }
+}
