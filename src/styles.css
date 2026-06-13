@@ -2275,12 +2275,88 @@ h1 {
 }
 
 @media (max-width: 560px) {
+  .career-roadmap {
+    padding-inline: 0.85rem;
+  }
+
   .career-path-panel {
-    margin-inline: -0.7rem;
+    gap: 0.85rem;
+    margin-inline: -0.35rem;
+    padding: 0.85rem;
+    border-radius: 24px;
+  }
+
+  .career-path-header {
+    align-items: flex-start;
+  }
+
+  .career-path-header h2 {
+    font-size: clamp(1.45rem, 10vw, 2.2rem);
+    line-height: 0.95;
+  }
+
+  .career-switch-icon {
+    width: 2.75rem;
+    height: 2.75rem;
+    border-width: 3px;
+    border-radius: 16px;
+    font-size: 1.45rem;
+  }
+
+  .certificate-card {
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+
+  .certificate-badge,
+  .level-node {
+    width: 3.2rem;
+    height: 3.2rem;
+    border-width: 5px;
+    border-radius: 18px;
+    font-size: 1.45rem;
+  }
+
+  .career-stats-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .career-stats-row div {
+    min-width: 0;
+    padding: 0.8rem;
+  }
+
+  .roadmap-map {
+    gap: 1rem;
+    padding-top: 0.15rem;
+  }
+
+  .roadmap-map::before {
+    top: 1.35rem;
+    bottom: 1.35rem;
+    left: 1.6rem;
+    width: 0.32rem;
+    opacity: 0.72;
   }
 
   .roadmap-level summary {
     align-items: flex-start;
+    gap: 0.75rem;
+    min-height: auto;
+    padding: 0.72rem;
+    border-radius: 22px;
+    box-shadow: 0 7px 0 rgba(124, 255, 107, 0.12), 0 0 18px rgba(124, 255, 107, 0.08);
+  }
+
+  .level-summary-copy {
+    gap: 0.18rem;
+    padding-top: 0.1rem;
+  }
+
+  .level-summary-copy strong {
+    font-size: clamp(1rem, 5.7vw, 1.32rem);
+    line-height: 1.08;
   }
 
   .level-status {
@@ -2288,12 +2364,27 @@ h1 {
   }
 
   .level-reveal-card {
-    margin-left: 0.7rem;
+    gap: 0.8rem;
+    margin: 0.7rem 0 0;
+    padding: 0.85rem;
+    border-radius: 20px;
+    box-shadow: inset 0 0 0 1px rgba(124, 255, 107, 0.04);
+  }
+
+  .level-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .level-meta-grid span:last-child {
+    grid-column: 1 / -1;
   }
 
   .section-project-preview {
     align-items: stretch;
     flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.75rem;
   }
 
   .mini-preview {
