@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { BottomNav } from './components/BottomNav.jsx';
 import { StatCard } from './components/StatCard.jsx';
 import { useLocalStorage } from './hooks/useLocalStorage.js';
-import { beginnerLessons } from './data/lessons.js';
+import { beginnerLessons, roadmapSections } from './data/lessons.js';
 import { beginnerProjects } from './data/projects.js';
 import { beginnerChallenges, getChallengeStarterCode } from './data/challenges.js';
 import { DAILY_REVIEW_GOAL, DAILY_REVIEW_XP_REWARD, reviewCards } from './data/reviewCards.js';
@@ -1757,37 +1757,60 @@ function HomeLessonCard({ nextLesson, onOpenLesson }) {
 }
 
 function LearningPath({ completedLessonIds, onOpenLesson }) {
+  const completedCount = completedLessonIds.filter((lessonId) => beginnerLessons.some((lesson) => lesson.id === lessonId)).length;
+  const currentLesson = getFirstUnlockedIncompleteLesson(completedLessonIds);
+
   return (
     <section className="lesson-card learning-path" aria-labelledby="learn-title">
       <div className="section-heading">
         <div>
-          <p className="eyebrow">Learn</p>
-          <h2 id="learn-title">Beginner web development path</h2>
+          <p className="eyebrow">Learn roadmap</p>
+          <h2 id="learn-title">Beginner coding roadmap</h2>
         </div>
-        <span>{completedLessonIds.filter((lessonId) => beginnerLessons.some((lesson) => lesson.id === lessonId)).length}/{beginnerLessons.length}</span>
+        <span>{completedCount}/{beginnerLessons.length}</span>
       </div>
-      <p>Start with plain-language basics, then unlock each next lesson by finishing the one before it.</p>
-      <div className="lesson-list">
-        {beginnerLessons.map((lesson, index) => {
-          const isCompleted = completedLessonIds.includes(lesson.id);
-          const isUnlocked = isLessonUnlocked(lesson.id, completedLessonIds);
-          const status = isCompleted ? 'completed' : isUnlocked ? 'unlocked' : 'locked';
+      <p>Follow the path from absolute basics to small app-building skills. Finish one interactive lesson to unlock the next step.</p>
+      <div className="progress-track" aria-label={`${completedCount} of ${beginnerLessons.length} lessons complete`}>
+        <span style={{ width: `${(completedCount / beginnerLessons.length) * 100}%` }} />
+      </div>
+      <div className="roadmap-sections">
+        {roadmapSections.map((sectionName) => {
+          const sectionLessons = beginnerLessons.filter((lesson) => lesson.roadmapSection === sectionName);
+          if (sectionLessons.length === 0) return null;
 
           return (
-            <button
-              className={`path-card ${status}`}
-              disabled={!isUnlocked}
-              key={lesson.id}
-              onClick={() => onOpenLesson(lesson)}
-              type="button"
-            >
-              <span className="path-step">{index + 1}</span>
-              <span className="path-copy">
-                <strong>{lesson.title}</strong>
-                <small>{lesson.minutes} min • {lesson.tags.join(' • ')} • +{lesson.xpReward} XP</small>
-              </span>
-              <span className="path-status">{getLessonStatusLabel(status)}</span>
-            </button>
+            <section className="roadmap-stage" key={sectionName} aria-label={sectionName}>
+              <div className="roadmap-stage-heading">
+                <span>{sectionName}</span>
+                <small>{sectionLessons.length} lessons</small>
+              </div>
+              <div className="roadmap-node-list">
+                {sectionLessons.map((lesson) => {
+                  const isCompleted = completedLessonIds.includes(lesson.id);
+                  const isUnlocked = isLessonUnlocked(lesson.id, completedLessonIds);
+                  const isCurrent = currentLesson?.id === lesson.id;
+                  const status = isCompleted ? 'completed' : isUnlocked ? 'unlocked' : 'locked';
+
+                  return (
+                    <button
+                      className={`path-card roadmap-node ${status} ${isCurrent ? 'current' : ''}`}
+                      disabled={!isUnlocked}
+                      key={lesson.id}
+                      onClick={() => onOpenLesson(lesson)}
+                      type="button"
+                    >
+                      <span className="path-step">{isCompleted ? '✓' : isUnlocked ? lesson.order : '🔒'}</span>
+                      <span className="path-copy">
+                        <strong>{lesson.title}</strong>
+                        <small>{lesson.concept}</small>
+                        <small>{lesson.minutes} min • {lesson.tags.join(' • ')} • +{lesson.xpReward} XP</small>
+                      </span>
+                      <span className="path-status">{isCurrent ? 'Recommended' : getLessonStatusLabel(status)}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
           );
         })}
       </div>
@@ -1797,18 +1820,46 @@ function LearningPath({ completedLessonIds, onOpenLesson }) {
 
 function LessonScreen({ lesson, completedLessonIds, onAskAiHelp, onBack, onComplete }) {
   const isComplete = completedLessonIds.includes(lesson.id);
+  const [activityAnswer, setActivityAnswer] = useState('');
+  const [activityFeedback, setActivityFeedback] = useState(isComplete ? 'Already complete — you can review the activity any time.' : '');
+  const [hasPassedActivity, setHasPassedActivity] = useState(isComplete);
+  const activity = lesson.activity;
+
+  useEffect(() => {
+    setActivityAnswer('');
+    setActivityFeedback(isComplete ? 'Already complete — you can review the activity any time.' : '');
+    setHasPassedActivity(isComplete);
+  }, [lesson.id, isComplete]);
+
+  function checkActivity() {
+    const result = validateLessonActivity(activity, activityAnswer);
+    setHasPassedActivity(result.passed);
+    setActivityFeedback(result.passed
+      ? 'Nice work — that shows you used the concept. You can complete the lesson now!'
+      : 'Good try. Use the hint or reveal the example, then try again.');
+  }
+
+  function revealAnswer() {
+    setActivityAnswer(activity.sampleAnswer ?? activity.expectedAnswer);
+    setHasPassedActivity(true);
+    setActivityFeedback('Example revealed. Read it carefully, then complete the lesson when it makes sense.');
+  }
 
   return (
     <article className="lesson-card lesson-screen" aria-labelledby="lesson-screen-title">
-      <button className="back-button" type="button" onClick={onBack}>← Back to path</button>
+      <button className="back-button" type="button" onClick={onBack}>← Back to roadmap</button>
       <div className="section-heading">
-        <p className="eyebrow">Lesson</p>
+        <p className="eyebrow">{lesson.roadmapSection}</p>
         <span>{lesson.minutes} min</span>
       </div>
       <h2 id="lesson-screen-title">{lesson.title}</h2>
       <div className="lesson-meta">
         {lesson.tags.map((tag) => <span key={tag}>{tag}</span>)}
         <span>+{lesson.xpReward} XP</span>
+      </div>
+      <div className="concept-card">
+        <strong>Concept</strong>
+        <p>{lesson.concept}</p>
       </div>
       <p>{lesson.explanation}</p>
 
@@ -1820,28 +1871,46 @@ function LessonScreen({ lesson, completedLessonIds, onAskAiHelp, onBack, onCompl
       )}
 
       <div className="mini-task">
-        <strong>Mini task</strong>
+        <strong>Try it yourself</strong>
         <p>{lesson.miniTask}</p>
       </div>
 
-      <details className="quiz-card">
-        <summary>{lesson.quiz.question}</summary>
-        <ul>
-          {lesson.quiz.choices.map((choice) => (
-            <li className={choice === lesson.quiz.answer ? 'correct-answer' : undefined} key={choice}>{choice}</li>
-          ))}
-        </ul>
-        <p><strong>Answer:</strong> {lesson.quiz.answer}</p>
-      </details>
-
-      <details className="hint-card">
-        <summary>Need a hint?</summary>
-        <p>{lesson.hint}</p>
-      </details>
+      <div className="activity-card">
+        <div>
+          <strong>Interactive check</strong>
+          <p>{activity.prompt}</p>
+        </div>
+        {activity.type === 'choice' ? (
+          <div className="activity-choices">
+            {activity.choices.map((choice) => (
+              <label className="activity-choice" key={choice}>
+                <input checked={activityAnswer === choice} onChange={() => setActivityAnswer(choice)} type="radio" name={`activity-${lesson.id}`} />
+                <span>{choice}</span>
+              </label>
+            ))}
+          </div>
+        ) : (
+          <textarea
+            aria-label="Lesson activity answer"
+            onChange={(event) => setActivityAnswer(event.target.value)}
+            placeholder="Type your answer here..."
+            value={activityAnswer}
+          />
+        )}
+        <details className="hint-card inline-hint">
+          <summary>Need a hint?</summary>
+          <p>{lesson.hint}</p>
+        </details>
+        {activityFeedback && <p className={`activity-feedback ${hasPassedActivity ? 'passed' : 'needs-work'}`} role="status">{activityFeedback}</p>}
+        <div className="lesson-actions compact-actions">
+          <button className="secondary-button" type="button" onClick={checkActivity}>Check my answer</button>
+          <button className="secondary-button" type="button" onClick={revealAnswer}>Reveal example</button>
+        </div>
+      </div>
 
       <div className="lesson-actions">
-        <button className="primary-button" type="button" onClick={() => onComplete(lesson)}>
-          {isComplete ? 'Lesson complete ✓' : `Complete lesson for ${lesson.xpReward} XP`}
+        <button className="primary-button" disabled={!hasPassedActivity} type="button" onClick={() => onComplete(lesson)}>
+          {isComplete ? 'Lesson complete ✓' : hasPassedActivity ? `Complete lesson for ${lesson.xpReward} XP` : 'Complete unlocks after the activity'}
         </button>
         <button className="secondary-button" type="button" onClick={() => onAskAiHelp(lesson)}>
           Ask AI to explain this lesson
@@ -1849,6 +1918,15 @@ function LessonScreen({ lesson, completedLessonIds, onAskAiHelp, onBack, onCompl
       </div>
     </article>
   );
+}
+
+function validateLessonActivity(activity, answer) {
+  const normalizedAnswer = String(answer ?? '').trim().toLowerCase();
+  const expected = String(activity.expectedAnswer ?? '').trim().toLowerCase();
+
+  if (activity.validation === 'non-empty') return { passed: normalizedAnswer.length >= 3 };
+  if (activity.validation === 'contains') return { passed: normalizedAnswer.includes(expected) };
+  return { passed: normalizedAnswer === expected };
 }
 
 function renderChecklistCard({ checklistIsComplete, completedChecklistCount, toggleChecklistItem, progress, dailyGoalIsComplete }) {

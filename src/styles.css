@@ -1759,3 +1759,197 @@ h1 {
 .stat-card {
   backdrop-filter: blur(22px);
 }
+
+.roadmap-sections {
+  display: grid;
+  gap: 1.35rem;
+}
+
+.roadmap-stage {
+  position: relative;
+  display: grid;
+  gap: 0.85rem;
+  padding-left: 0.25rem;
+}
+
+.roadmap-stage-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border: 1px solid rgba(124, 255, 107, 0.2);
+  border-radius: 18px;
+  background: rgba(124, 255, 107, 0.06);
+  padding: 0.75rem 0.9rem;
+}
+
+.roadmap-stage-heading span {
+  color: var(--cq-green, #272c5f);
+  font-weight: 900;
+}
+
+.roadmap-stage-heading small {
+  color: var(--cq-muted, #6f7393);
+  font-weight: 800;
+}
+
+.roadmap-node-list {
+  position: relative;
+  display: grid;
+  gap: 0.95rem;
+  padding-left: 0.45rem;
+}
+
+.roadmap-node-list::before {
+  position: absolute;
+  top: 0.4rem;
+  bottom: 0.4rem;
+  left: 1.55rem;
+  width: 2px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(124, 255, 107, 0.55), rgba(217, 183, 110, 0.25));
+  content: "";
+}
+
+.roadmap-node {
+  position: relative;
+  z-index: 1;
+}
+
+.roadmap-node.current {
+  border-color: rgba(217, 183, 110, 0.68);
+  box-shadow: var(--cq-shadow, 0 16px 30px rgba(59, 54, 138, 0.12)), 0 0 0 3px rgba(217, 183, 110, 0.12);
+}
+
+.concept-card,
+.activity-card {
+  display: grid;
+  gap: 0.75rem;
+  border: 1px solid var(--cq-line, #ececff);
+  border-radius: 20px;
+  background: linear-gradient(145deg, rgba(11, 24, 16, 0.94), rgba(4, 9, 6, 0.92));
+  color: #d7ffd2;
+  padding: 1rem;
+}
+
+.concept-card strong,
+.activity-card strong {
+  color: var(--cq-green, #272c5f);
+}
+
+.activity-card textarea {
+  width: 100%;
+  min-height: 7rem;
+  resize: vertical;
+  border: 1px solid rgba(124, 255, 107, 0.24);
+  border-radius: 16px;
+  background: #020604;
+  color: var(--cq-green, #272c5f);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  line-height: 1.5;
+  padding: 0.85rem;
+}
+
+.activity-choices {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.activity-choice {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 3rem;
+  border: 1px solid rgba(124, 255, 107, 0.18);
+  border-radius: 16px;
+  background: rgba(2, 6, 4, 0.72);
+  padding: 0.75rem;
+  font-weight: 800;
+}
+
+.activity-choice input {
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--cq-green, #6d5dfc);
+}
+
+.activity-feedback {
+  margin: 0;
+  border-radius: 16px;
+  padding: 0.85rem;
+  font-weight: 850;
+}
+
+.activity-feedback.passed {
+  border: 1px solid rgba(124, 255, 107, 0.32);
+  background: rgba(124, 255, 107, 0.1);
+  color: var(--cq-green-soft, #138f82);
+}
+
+.activity-feedback.needs-work {
+  border: 1px solid rgba(217, 183, 110, 0.32);
+  background: rgba(217, 183, 110, 0.09);
+  color: #ffe7a3;
+}
+
+.inline-hint {
+  padding: 0.85rem;
+}
+
+.compact-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.primary-button:disabled {
+  cursor: not-allowed;
+  filter: grayscale(0.7);
+  opacity: 0.58;
+  transform: none;
+}
+
+@media (min-width: 760px) {
+  .learning-path {
+    gap: 1.35rem;
+  }
+
+  .roadmap-sections {
+    gap: 1.75rem;
+  }
+
+  .roadmap-stage {
+    padding-left: 1rem;
+  }
+
+  .roadmap-node-list {
+    gap: 1.1rem;
+    padding-left: 1.35rem;
+  }
+
+  .roadmap-node-list::before {
+    left: 2.45rem;
+  }
+
+  .roadmap-node:nth-child(even) {
+    margin-left: 2.25rem;
+  }
+
+  .lesson-screen {
+    max-width: 880px;
+    justify-self: center;
+    width: 100%;
+  }
+}
+
+@media (max-width: 560px) {
+  .compact-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .roadmap-node-list {
+    padding-left: 0;
+  }
+
+  .roadmap-node-list::before {
+    left: 1.1rem;
+  }
+}

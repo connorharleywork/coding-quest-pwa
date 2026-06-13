@@ -1,4 +1,4 @@
-export const beginnerLessons = [
+const lessonSeed = [
   {
     id: 'lesson-what-is-coding',
     title: 'What is coding?',
@@ -341,3 +341,55 @@ export const beginnerLessons = [
     hint: 'Export shares. Import receives.',
   },
 ];
+
+export const roadmapSections = [
+  'Basics',
+  'HTML Foundations',
+  'CSS Foundations',
+  'JavaScript Foundations',
+  'Debugging and Reading Code',
+  'Mini Application Skills',
+];
+
+const lessonActivityDetails = {
+  'lesson-what-is-coding': { section: 'Basics', concept: 'Computers follow exact steps', type: 'text', prompt: 'Type one tiny instruction you could give a robot helper.', expectedAnswer: 'step', validation: 'non-empty', sampleAnswer: 'Pick up the bread slice.', hint: 'Use one clear action, like “open”, “click”, “type”, or “show”.' },
+  'lesson-what-is-a-website': { section: 'Basics', concept: 'Websites are opened in browsers', type: 'choice', prompt: 'Which part reads website files and shows the page?', expectedAnswer: 'A web browser', choices: ['A web browser', 'A notebook', 'A microwave'], sampleAnswer: 'A web browser', hint: 'Safari, Chrome, Firefox, and Edge are examples.' },
+  'lesson-html-basics': { section: 'HTML Foundations', concept: 'HTML gives page content structure', type: 'choice', prompt: 'What does HTML mainly describe?', expectedAnswer: 'Structure and meaning', choices: ['Structure and meaning', 'Only colours', 'Internet speed'], sampleAnswer: 'Structure and meaning', hint: 'HTML names parts like headings, paragraphs, and buttons.' },
+  'lesson-css-basics': { section: 'CSS Foundations', concept: 'CSS styles the page', type: 'choice', prompt: 'Which line makes button text white?', expectedAnswer: 'color: white;', choices: ['color: white;', '<button>white</button>', 'click: white;'], sampleAnswer: 'color: white;', hint: 'CSS uses property: value;' },
+  'lesson-javascript-basics': { section: 'JavaScript Foundations', concept: 'JavaScript adds interaction and logic', type: 'choice', prompt: 'Which language usually reacts when a button is clicked?', expectedAnswer: 'JavaScript', choices: ['JavaScript', 'HTML', 'CSS'], sampleAnswer: 'JavaScript', hint: 'It handles clicks, saved progress, and changing messages.' },
+  'lesson-html-headings-paragraphs': { section: 'HTML Foundations', concept: 'Headings title content and paragraphs hold text', type: 'text', prompt: 'Type an HTML h1 heading for a pet page.', expectedAnswer: '<h1>', validation: 'contains', sampleAnswer: '<h1>My pet page</h1>', hint: 'Start with <h1> and end with </h1>.' },
+  'lesson-html-links-images': { section: 'HTML Foundations', concept: 'Links navigate and images need alt text', type: 'text', prompt: 'Type the attribute name that tells a link where to go.', expectedAnswer: 'href', validation: 'contains', sampleAnswer: 'href', hint: 'It appears in <a href="https://example.com">.' },
+  'lesson-html-buttons-inputs': { section: 'HTML Foundations', concept: 'Buttons trigger actions and inputs collect text', type: 'choice', prompt: 'Which element lets someone type their name?', expectedAnswer: '<input>', choices: ['<input>', '<h1>', '<img>'], sampleAnswer: '<input>', hint: 'Inputs collect information from the learner.' },
+  'lesson-css-colours-backgrounds': { section: 'CSS Foundations', concept: 'Use color for text and background for the area behind it', type: 'text', prompt: 'Type the CSS property that changes text colour.', expectedAnswer: 'color', validation: 'contains', sampleAnswer: 'color: purple;', hint: 'Use the American spelling.' },
+  'lesson-css-spacing-margin-padding': { section: 'CSS Foundations', concept: 'Padding is inside; margin is outside', type: 'choice', prompt: 'Which spacing goes inside the border?', expectedAnswer: 'Padding', choices: ['Padding', 'Margin', 'Console'], sampleAnswer: 'Padding', hint: 'Padding protects the content inside a box.' },
+  'lesson-css-borders-radius': { section: 'CSS Foundations', concept: 'Borders outline boxes and radius rounds corners', type: 'text', prompt: 'Type the CSS property that rounds corners.', expectedAnswer: 'border-radius', validation: 'contains', sampleAnswer: 'border-radius: 12px;', hint: 'It combines border and radius.' },
+  'lesson-css-flexbox-basics': { section: 'CSS Foundations', concept: 'Flexbox arranges items in rows or columns', type: 'text', prompt: 'Type the CSS line that turns on flexbox.', expectedAnswer: 'display: flex', validation: 'contains', sampleAnswer: 'display: flex;', hint: 'It starts with the display property.' },
+  'lesson-javascript-variables': { section: 'JavaScript Foundations', concept: 'Variables store named values', type: 'text', prompt: 'Type a variable named xp with a value of 40.', expectedAnswer: 'xp', validation: 'contains', sampleAnswer: 'let xp = 40;', hint: 'Use let or const, then the name xp.' },
+  'lesson-javascript-functions': { section: 'JavaScript Foundations', concept: 'Functions group reusable steps', type: 'choice', prompt: 'What do you do when you want a function to run?', expectedAnswer: 'Call it', choices: ['Call it', 'Paint it', 'Delete HTML'], sampleAnswer: 'Call it', hint: 'A function is like a recipe you can run again.' },
+  'lesson-javascript-click-events': { section: 'JavaScript Foundations', concept: 'Event listeners react to clicks and taps', type: 'text', prompt: 'Type the method name that listens for a click.', expectedAnswer: 'addEventListener', validation: 'contains', sampleAnswer: "button.addEventListener('click', () => {});", hint: 'It includes the word Listener.' },
+  'lesson-javascript-conditionals': { section: 'JavaScript Foundations', concept: 'Conditionals make yes-or-no decisions', type: 'choice', prompt: 'Which keyword starts a basic conditional?', expectedAnswer: 'if', choices: ['if', 'style', 'href'], sampleAnswer: 'if', hint: 'It checks whether a condition is true.' },
+  'lesson-javascript-arrays': { section: 'Mini Application Skills', concept: 'Arrays store lists of values', type: 'choice', prompt: 'Which example is an array?', expectedAnswer: "['HTML', 'CSS']", choices: ["['HTML', 'CSS']", 'color: green;', '<h1>Hello</h1>'], sampleAnswer: "['HTML', 'CSS']", hint: 'Arrays use square brackets.' },
+  'lesson-what-is-debugging': { section: 'Debugging and Reading Code', concept: 'Debugging means finding and fixing problems', type: 'choice', prompt: 'Bug: <h1>Hello</h2>. What is wrong?', expectedAnswer: 'The closing tag does not match', choices: ['The closing tag does not match', 'The word Hello is banned', 'CSS is missing'], sampleAnswer: 'The closing tag does not match', hint: 'Compare the opening and closing tags.' },
+  'lesson-reading-error-messages': { section: 'Debugging and Reading Code', concept: 'Error messages are clues', type: 'choice', prompt: 'What should you look for first in an error?', expectedAnswer: 'File, line number, and clue words', choices: ['File, line number, and clue words', 'Only the colour red', 'The longest word'], sampleAnswer: 'File, line number, and clue words', hint: 'Errors often point to where the browser got confused.' },
+  'lesson-files-imports-exports': { section: 'Mini Application Skills', concept: 'Imports and exports share code between files', type: 'choice', prompt: 'What does export do?', expectedAnswer: 'Shares code or data', choices: ['Shares code or data', 'Deletes a folder', 'Starts the dev server'], sampleAnswer: 'Shares code or data', hint: 'Export shares. Import receives.' },
+};
+
+export const beginnerLessons = lessonSeed.map((lesson, index) => {
+  const activity = lessonActivityDetails[lesson.id];
+  return {
+    ...lesson,
+    roadmapSection: activity.section,
+    order: index + 1,
+    concept: activity.concept,
+    unlockRequirement: index === 0 ? null : lessonSeed[index - 1].id,
+    activity: {
+      type: activity.type,
+      prompt: activity.prompt,
+      choices: activity.choices ?? [],
+      expectedAnswer: activity.expectedAnswer,
+      validation: activity.validation ?? 'exact',
+      sampleAnswer: activity.sampleAnswer,
+    },
+    hint: activity.hint ?? lesson.hint,
+  };
+});
