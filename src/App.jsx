@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { BottomNav } from './components/BottomNav.jsx';
 import { StatCard } from './components/StatCard.jsx';
 import { useLocalStorage } from './hooks/useLocalStorage.js';
-import { beginnerLessons, roadmapSections } from './data/lessons.js';
+import { beginnerLessons } from './data/lessons.js';
 import { beginnerProjects } from './data/projects.js';
 import { beginnerChallenges, getChallengeStarterCode } from './data/challenges.js';
 import { DAILY_REVIEW_GOAL, DAILY_REVIEW_XP_REWARD, reviewCards } from './data/reviewCards.js';
@@ -1759,63 +1759,108 @@ function HomeLessonCard({ nextLesson, onOpenLesson }) {
 function LearningPath({ completedLessonIds, onOpenLesson }) {
   const completedCount = completedLessonIds.filter((lessonId) => beginnerLessons.some((lesson) => lesson.id === lessonId)).length;
   const currentLesson = getFirstUnlockedIncompleteLesson(completedLessonIds);
+  const completionPercent = Math.round((completedCount / beginnerLessons.length) * 100);
+  const careerPaceMinutes = Math.max(6, Math.round(beginnerLessons.reduce((total, lesson) => total + lesson.minutes, 0) / beginnerLessons.length));
+  const estimatedCompletionDate = getEstimatedCompletionDate(beginnerLessons.length - completedCount);
 
   return (
-    <section className="lesson-card learning-path" aria-labelledby="learn-title">
-      <div className="section-heading">
+    <section className="lesson-card learning-path career-roadmap" aria-labelledby="learn-title">
+      <div className="career-path-panel" aria-labelledby="career-title">
+        <div className="career-path-header">
+          <div>
+            <p className="eyebrow">Career path</p>
+            <h2 id="career-title">Full-Stack Developer</h2>
+          </div>
+          <span className="career-switch-icon" aria-hidden="true">⇄</span>
+        </div>
+        <div className="certificate-card">
+          <span className="certificate-badge" aria-hidden="true">✺</span>
+          <div>
+            <strong>Certificate of completion</strong>
+            <div className="progress-track career-progress" aria-label={`${completedCount} of ${beginnerLessons.length} lessons complete`}>
+              <span style={{ width: `${completionPercent}%` }} />
+            </div>
+            <div className="career-progress-meta">
+              <small>{completionPercent}% complete</small>
+              <small>{completedCount}/{beginnerLessons.length}</small>
+            </div>
+          </div>
+        </div>
+        <div className="career-stats-row">
+          <div>
+            <small>Est. completion</small>
+            <strong>{estimatedCompletionDate}</strong>
+          </div>
+          <div>
+            <small>Your pace</small>
+            <strong>{careerPaceMinutes}m/day</strong>
+          </div>
+        </div>
+      </div>
+
+      <div className="section-heading roadmap-intro-heading">
         <div>
           <p className="eyebrow">Learn roadmap</p>
-          <h2 id="learn-title">Beginner coding roadmap</h2>
+          <h2 id="learn-title">Tap a level to reveal the lesson details</h2>
         </div>
         <span>{completedCount}/{beginnerLessons.length}</span>
       </div>
-      <p>Follow the path from absolute basics to small app-building skills. Finish one interactive lesson to unlock the next step.</p>
-      <div className="progress-track" aria-label={`${completedCount} of ${beginnerLessons.length} lessons complete`}>
-        <span style={{ width: `${(completedCount / beginnerLessons.length) * 100}%` }} />
-      </div>
-      <div className="roadmap-sections">
-        {roadmapSections.map((sectionName) => {
-          const sectionLessons = beginnerLessons.filter((lesson) => lesson.roadmapSection === sectionName);
-          if (sectionLessons.length === 0) return null;
+      <p>Follow a gamified path from absolute basics to small app-building skills. Unlocked levels open lessons; locked levels preview what is coming next.</p>
+
+      <div className="roadmap-map" aria-label="Interactive beginner roadmap">
+        {beginnerLessons.map((lesson, index) => {
+          const isCompleted = completedLessonIds.includes(lesson.id);
+          const isUnlocked = isLessonUnlocked(lesson.id, completedLessonIds);
+          const isCurrent = currentLesson?.id === lesson.id;
+          const status = isCompleted ? 'completed' : isUnlocked ? 'unlocked' : 'locked';
+          const project = beginnerProjects[index % beginnerProjects.length];
 
           return (
-            <section className="roadmap-stage" key={sectionName} aria-label={sectionName}>
-              <div className="roadmap-stage-heading">
-                <span>{sectionName}</span>
-                <small>{sectionLessons.length} lessons</small>
+            <details className={`roadmap-level ${status} ${isCurrent ? 'current' : ''}`} key={lesson.id} open={isCurrent}>
+              <summary>
+                <span className="level-node" aria-hidden="true">{isCompleted ? '✓' : isUnlocked ? '⚡' : '🔒'}</span>
+                <span className="level-summary-copy">
+                  <small>{lesson.roadmapSection}</small>
+                  <strong>{lesson.order}. {lesson.title}</strong>
+                </span>
+                <span className="level-status">{isCurrent ? 'Recommended' : getLessonStatusLabel(status)}</span>
+              </summary>
+              <div className="level-reveal-card">
+                <p>{lesson.concept}</p>
+                <div className="level-meta-grid">
+                  <span>{lesson.minutes} min</span>
+                  <span>+{lesson.xpReward} XP</span>
+                  <span>{lesson.tags.slice(0, 2).join(' • ')}</span>
+                </div>
+                <div className="section-project-preview">
+                  <div>
+                    <small>Section project</small>
+                    <strong>{project.title}</strong>
+                  </div>
+                  <div className="mini-preview" aria-hidden="true">
+                    <span className="mini-preview-bar">Preview</span>
+                    <span className="mini-preview-avatar" />
+                    <span className="mini-preview-line" />
+                    <span className="mini-preview-line short" />
+                  </div>
+                </div>
+                <button className="primary-button" disabled={!isUnlocked} type="button" onClick={() => onOpenLesson(lesson)}>
+                  {isUnlocked ? 'Open this level' : 'Complete the previous level to unlock'}
+                </button>
               </div>
-              <div className="roadmap-node-list">
-                {sectionLessons.map((lesson) => {
-                  const isCompleted = completedLessonIds.includes(lesson.id);
-                  const isUnlocked = isLessonUnlocked(lesson.id, completedLessonIds);
-                  const isCurrent = currentLesson?.id === lesson.id;
-                  const status = isCompleted ? 'completed' : isUnlocked ? 'unlocked' : 'locked';
-
-                  return (
-                    <button
-                      className={`path-card roadmap-node ${status} ${isCurrent ? 'current' : ''}`}
-                      disabled={!isUnlocked}
-                      key={lesson.id}
-                      onClick={() => onOpenLesson(lesson)}
-                      type="button"
-                    >
-                      <span className="path-step">{isCompleted ? '✓' : isUnlocked ? lesson.order : '🔒'}</span>
-                      <span className="path-copy">
-                        <strong>{lesson.title}</strong>
-                        <small>{lesson.concept}</small>
-                        <small>{lesson.minutes} min • {lesson.tags.join(' • ')} • +{lesson.xpReward} XP</small>
-                      </span>
-                      <span className="path-status">{isCurrent ? 'Recommended' : getLessonStatusLabel(status)}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
+            </details>
           );
         })}
       </div>
     </section>
   );
+}
+
+function getEstimatedCompletionDate(remainingLessonCount) {
+  const daysToFinish = Math.max(1, remainingLessonCount);
+  const estimatedDate = new Date();
+  estimatedDate.setDate(estimatedDate.getDate() + daysToFinish);
+  return estimatedDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function LessonScreen({ lesson, completedLessonIds, onAskAiHelp, onBack, onComplete }) {

@@ -1953,3 +1953,345 @@ h1 {
     left: 1.1rem;
   }
 }
+
+.career-roadmap {
+  overflow: hidden;
+  border-color: var(--cq-line-strong);
+  background:
+    radial-gradient(circle at 85% 0%, rgba(124, 255, 107, 0.16), transparent 18rem),
+    radial-gradient(circle at 10% 10%, rgba(217, 183, 110, 0.1), transparent 16rem),
+    linear-gradient(180deg, rgba(4, 10, 6, 0.98) 0%, rgba(8, 22, 13, 0.96) 100%);
+  color: var(--cq-green-soft);
+}
+
+.career-roadmap > p,
+.career-roadmap .roadmap-intro-heading h2 {
+  color: var(--cq-green-soft);
+}
+
+.career-path-panel {
+  display: grid;
+  gap: 1rem;
+  margin: -0.35rem -0.35rem 0.3rem;
+  padding: 1rem;
+  border: 1px solid var(--cq-line);
+  border-radius: 28px;
+  background: linear-gradient(145deg, rgba(7, 15, 11, 0.96), rgba(3, 8, 5, 0.94));
+  box-shadow: inset 0 0 0 1px rgba(124, 255, 107, 0.06), 0 0 36px rgba(124, 255, 107, 0.08);
+}
+
+.career-path-header,
+.certificate-card,
+.career-progress-meta,
+.career-stats-row,
+.roadmap-level summary,
+.section-project-preview {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.career-path-header {
+  justify-content: space-between;
+}
+
+.career-path-header h2 {
+  margin-bottom: 0;
+  color: var(--cq-green-soft);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: clamp(1.75rem, 7vw, 3rem);
+}
+
+.career-switch-icon {
+  display: grid;
+  width: 3.5rem;
+  height: 3.5rem;
+  place-items: center;
+  border: 1px solid var(--cq-line-strong);
+  border-radius: 18px;
+  background: rgba(10, 38, 21, 0.9);
+  color: var(--cq-green-soft);
+  font-size: 2rem;
+  font-weight: 900;
+}
+
+.certificate-card {
+  align-items: flex-start;
+  padding: 0.85rem;
+  border: 1px solid var(--cq-line);
+  border-radius: 22px;
+}
+
+.certificate-badge {
+  display: grid;
+  flex: 0 0 auto;
+  width: 4.2rem;
+  height: 4.2rem;
+  place-items: center;
+  border: 2px solid var(--cq-green);
+  border-radius: 22px;
+  background: linear-gradient(145deg, rgba(10, 38, 21, 0.96), rgba(3, 10, 6, 0.94));
+  color: var(--cq-green-soft);
+  box-shadow: 0 0.55rem 0 rgba(217, 183, 110, 0.75), 0 0 24px rgba(124, 255, 107, 0.2);
+  font-size: 2rem;
+}
+
+.certificate-card > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.certificate-card strong {
+  display: block;
+  margin-bottom: 0.7rem;
+  color: var(--cq-green-soft);
+  font-size: clamp(1.1rem, 4vw, 1.7rem);
+}
+
+.career-progress {
+  height: 0.65rem;
+  margin-bottom: 0.6rem;
+  background: rgba(2, 7, 4, 0.92);
+}
+
+.career-progress span {
+  background: linear-gradient(90deg, var(--cq-green), var(--cq-gold));
+}
+
+.career-progress-meta,
+.career-stats-row small,
+.roadmap-level small,
+.level-reveal-card p {
+  color: var(--cq-muted);
+}
+
+.career-progress-meta {
+  justify-content: space-between;
+  font-weight: 800;
+}
+
+.career-stats-row {
+  border: 1px solid var(--cq-line);
+  border-radius: 22px;
+  overflow: hidden;
+}
+
+.career-stats-row div {
+  flex: 1;
+  display: grid;
+  gap: 0.3rem;
+  padding: 1rem;
+}
+
+.career-stats-row div + div {
+  border-left: 1px solid var(--cq-line);
+}
+
+.career-stats-row strong {
+  color: var(--cq-green);
+  font-size: clamp(1.35rem, 5vw, 2rem);
+}
+
+.roadmap-map {
+  position: relative;
+  display: grid;
+  gap: 1.35rem;
+  padding: 0.5rem 0.2rem 0;
+}
+
+.roadmap-map::before {
+  position: absolute;
+  top: 2rem;
+  bottom: 2rem;
+  left: 2.3rem;
+  width: 0.45rem;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--cq-green), var(--cq-gold) 48%, rgba(124, 255, 107, 0.25));
+  content: "";
+}
+
+.roadmap-level {
+  position: relative;
+  z-index: 1;
+}
+
+.roadmap-level summary {
+  min-height: 5.6rem;
+  list-style: none;
+  cursor: pointer;
+  border-radius: 28px;
+  background: linear-gradient(145deg, rgba(10, 38, 21, 0.96), rgba(3, 10, 6, 0.94));
+  padding: 0.7rem;
+  box-shadow: 0 10px 0 rgba(2, 7, 4, 0.95), 0 0 26px rgba(124, 255, 107, 0.12);
+}
+
+.roadmap-level summary::-webkit-details-marker {
+  display: none;
+}
+
+.level-node {
+  display: grid;
+  flex: 0 0 auto;
+  width: 4.2rem;
+  height: 4.2rem;
+  place-items: center;
+  border: 2px solid var(--cq-green);
+  border-radius: 24px;
+  background: rgba(124, 255, 107, 0.14);
+  color: var(--cq-green);
+  font-size: 2rem;
+  font-weight: 900;
+}
+
+.roadmap-level.locked summary {
+  background: linear-gradient(145deg, rgba(9, 13, 10, 0.9), rgba(3, 5, 4, 0.94));
+  box-shadow: 0 10px 0 rgba(0, 0, 0, 0.72);
+}
+
+.roadmap-level.locked .level-node {
+  border-color: rgba(124, 255, 107, 0.2);
+  background: rgba(10, 38, 21, 0.9);
+  color: var(--cq-muted);
+}
+
+.level-summary-copy {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.level-summary-copy strong {
+  color: var(--cq-green-soft);
+  font-size: clamp(1.05rem, 4vw, 1.55rem);
+}
+
+.level-status,
+.level-meta-grid span {
+  border-radius: 999px;
+  background: rgba(217, 183, 110, 0.09);
+  color: var(--cq-gold);
+  font-size: 0.76rem;
+  font-weight: 900;
+  padding: 0.45rem 0.65rem;
+  white-space: nowrap;
+}
+
+.level-reveal-card {
+  display: grid;
+  gap: 0.9rem;
+  margin: 0.85rem 0 0 5.2rem;
+  padding: 1rem;
+  border: 1px solid var(--cq-line);
+  border-radius: 24px;
+  background: rgba(4, 9, 6, 0.94);
+}
+
+.level-meta-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.section-project-preview {
+  justify-content: space-between;
+  padding: 0.85rem;
+  border-radius: 20px;
+  background: rgba(2, 7, 4, 0.88);
+}
+
+.section-project-preview small {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.section-project-preview strong {
+  color: var(--cq-green-soft);
+}
+
+.mini-preview {
+  display: grid;
+  flex: 0 0 8.5rem;
+  gap: 0.25rem;
+  padding: 0.45rem;
+  border-radius: 12px;
+  background: linear-gradient(160deg, rgba(124, 255, 107, 0.24), rgba(2, 7, 4, 0.95));
+}
+
+.mini-preview-bar,
+.mini-preview-line {
+  height: 0.55rem;
+  border-radius: 999px;
+  background: rgba(181, 255, 173, 0.78);
+}
+
+.mini-preview-bar {
+  height: 0.75rem;
+  background: rgba(2, 7, 4, 0.9);
+  color: var(--cq-green);
+  font-size: 0.42rem;
+  font-weight: 900;
+  line-height: 0.75rem;
+  text-align: right;
+  text-transform: uppercase;
+}
+
+.mini-preview-avatar {
+  justify-self: center;
+  width: 1.45rem;
+  height: 1.45rem;
+  border-radius: 50%;
+  background: var(--cq-gold);
+}
+
+.mini-preview-line.short {
+  width: 72%;
+  justify-self: center;
+}
+
+@media (min-width: 760px) {
+  .roadmap-map::before {
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .roadmap-level:nth-child(odd) {
+    width: min(48%, 30rem);
+  }
+
+  .roadmap-level:nth-child(even) {
+    width: min(48%, 30rem);
+    justify-self: end;
+  }
+
+  .level-reveal-card {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .career-path-panel {
+    margin-inline: -0.7rem;
+  }
+
+  .roadmap-level summary {
+    align-items: flex-start;
+  }
+
+  .level-status {
+    display: none;
+  }
+
+  .level-reveal-card {
+    margin-left: 0.7rem;
+  }
+
+  .section-project-preview {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .mini-preview {
+    width: 100%;
+    flex-basis: auto;
+  }
+}
