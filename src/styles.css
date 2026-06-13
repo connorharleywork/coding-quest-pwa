@@ -2404,6 +2404,12 @@ h1 {
   pointer-events: none;
 }
 
+.ai-buddy-shell--custom {
+  right: auto;
+  bottom: auto;
+  justify-items: end;
+}
+
 .ai-buddy-shell--bottom-left,
 .ai-buddy-shell--top-left {
   right: auto;
@@ -2456,6 +2462,13 @@ h1 {
   padding: 0 1rem;
   border-radius: 999px;
   font-family: Consolas, "Courier New", monospace;
+  touch-action: none;
+  user-select: none;
+  cursor: grab;
+}
+
+.ai-buddy-button:active {
+  cursor: grabbing;
 }
 
 .ai-buddy-move-button {
