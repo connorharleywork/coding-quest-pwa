@@ -2313,8 +2313,41 @@ h1 {
   pointer-events: none;
 }
 
+.ai-buddy-shell--bottom-left,
+.ai-buddy-shell--top-left {
+  right: auto;
+  left: max(1rem, env(safe-area-inset-left));
+  justify-items: start;
+}
+
+.ai-buddy-shell--top-right,
+.ai-buddy-shell--top-left {
+  top: calc(1rem + env(safe-area-inset-top));
+  bottom: auto;
+}
+
+.ai-buddy-shell--bottom-right,
+.ai-buddy-shell--top-right {
+  right: max(1rem, env(safe-area-inset-right));
+  left: auto;
+}
+
+.ai-buddy-launcher-row,
+.ai-buddy-panel-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  pointer-events: auto;
+}
+
+.ai-buddy-shell--bottom-left .ai-buddy-launcher-row,
+.ai-buddy-shell--top-left .ai-buddy-launcher-row {
+  flex-direction: row-reverse;
+}
+
 .ai-buddy-button,
-.ai-buddy-panel {
+.ai-buddy-panel,
+.ai-buddy-move-button {
   pointer-events: auto;
   border: 1px solid rgba(124, 255, 107, 0.42);
   color: #dfffd9;
@@ -2334,6 +2367,13 @@ h1 {
   font-family: Consolas, "Courier New", monospace;
 }
 
+.ai-buddy-move-button {
+  min-height: 2.75rem;
+  padding: 0 0.8rem;
+  border-radius: 999px;
+  font-weight: 800;
+}
+
 .ai-buddy-button span {
   color: #7cff6b;
   font-weight: 900;
@@ -2345,6 +2385,15 @@ h1 {
   overflow: auto;
   padding: 1rem;
   border-radius: 22px;
+}
+
+.ai-buddy-panel-controls {
+  justify-content: flex-end;
+}
+
+.compact-button {
+  min-height: 2.25rem;
+  padding: 0 0.75rem;
 }
 
 .ai-buddy-panel h2,
@@ -2401,13 +2450,40 @@ h1 {
 
 @media (max-width: 640px) {
   .ai-buddy-shell {
-    right: 0.75rem;
-    left: 0.75rem;
+    max-width: calc(100vw - 1.5rem);
+  }
+
+  .ai-buddy-shell--bottom-right {
+    right: max(0.75rem, env(safe-area-inset-right));
     bottom: calc(5.25rem + env(safe-area-inset-bottom));
   }
 
+  .ai-buddy-shell--bottom-left {
+    left: max(0.75rem, env(safe-area-inset-left));
+    bottom: calc(5.25rem + env(safe-area-inset-bottom));
+  }
+
+  .ai-buddy-shell--top-right {
+    right: max(0.75rem, env(safe-area-inset-right));
+    top: calc(0.75rem + env(safe-area-inset-top));
+  }
+
+  .ai-buddy-shell--top-left {
+    left: max(0.75rem, env(safe-area-inset-left));
+    top: calc(0.75rem + env(safe-area-inset-top));
+  }
+
   .ai-buddy-panel {
-    width: 100%;
+    width: min(100%, calc(100vw - 1.5rem));
     max-height: min(36rem, calc(100vh - 7.25rem));
+  }
+
+  .ai-buddy-button {
+    padding: 0 0.85rem;
+  }
+
+  .ai-buddy-move-button {
+    min-height: 2.5rem;
+    padding: 0 0.7rem;
   }
 }

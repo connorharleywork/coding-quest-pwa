@@ -35,6 +35,14 @@ const readLessonChecklistItem = dailyChecklist.find((item) => item.id === 'read-
 const practiceChecklistItem = dailyChecklist.find((item) => item.id === 'solve-challenge');
 const PLAYGROUND_STORAGE_KEY = 'codequest-playground-code';
 const AI_HELPER_STORAGE_KEY = 'codequest-ai-helper-draft';
+const AI_BUDDY_POSITION_STORAGE_KEY = 'codequest-ai-buddy-position';
+const AI_BUDDY_POSITIONS = [
+  { id: 'bottom-right', label: 'Bottom right' },
+  { id: 'bottom-left', label: 'Bottom left' },
+  { id: 'top-right', label: 'Top right' },
+  { id: 'top-left', label: 'Top left' },
+];
+const DEFAULT_AI_BUDDY_POSITION = 'bottom-right';
 const BACKUP_SCHEMA_VERSION = 1;
 const starterPlaygroundCode = {
   html: `<section class="mini-page">
@@ -89,6 +97,7 @@ function App() {
   const [aiBuddyOpen, setAiBuddyOpen] = useState(false);
   const [aiBuddyPrompt, setAiBuddyPrompt] = useState('');
   const [aiBuddyCopyFeedback, setAiBuddyCopyFeedback] = useState('');
+  const [aiBuddyPosition, setAiBuddyPosition] = useLocalStorage(AI_BUDDY_POSITION_STORAGE_KEY, DEFAULT_AI_BUDDY_POSITION);
 
   const level = getLevelFromXp(progress.totalXp);
   const completedChecklistCount = getCompletedChecklistCount(progress, dailyChecklist);
@@ -265,6 +274,7 @@ function App() {
       progress,
       playgroundCode,
       aiHelperDraft,
+      aiBuddyPosition: isAiBuddyPosition(aiBuddyPosition) ? aiBuddyPosition : DEFAULT_AI_BUDDY_POSITION,
     };
     const backupBlob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
     const backupUrl = URL.createObjectURL(backupBlob);
@@ -301,7 +311,11 @@ function App() {
         setAiHelperDraft({ ...emptyAiHelperDraft, ...backup.aiHelperDraft });
       }
 
-      setBackupFeedback('Progress restored! Your XP, streak, lessons, projects, prompts, and playground draft were imported.');
+      if (isAiBuddyPosition(backup.aiBuddyPosition)) {
+        setAiBuddyPosition(backup.aiBuddyPosition);
+      }
+
+      setBackupFeedback('Progress restored! Your XP, streak, lessons, projects, prompts, playground draft, and AI Buddy spot were imported.');
     } catch (error) {
       console.warn('CodeQuest could not import the progress backup.', error);
       setBackupFeedback('Import failed. Please choose a CodeQuest JSON backup file.');
@@ -722,6 +736,14 @@ ${project.starterCode.js}`,
     recordAiBuddyUse();
   }
 
+  function moveAiBuddy() {
+    const currentIndex = AI_BUDDY_POSITIONS.findIndex((position) => position.id === aiBuddyPosition);
+    const nextPosition = AI_BUDDY_POSITIONS[(currentIndex + 1) % AI_BUDDY_POSITIONS.length];
+
+    setAiBuddyPosition(nextPosition.id);
+    setAiBuddyCopyFeedback(`AI Buddy moved to ${nextPosition.label.toLowerCase()}.`);
+  }
+
   function buildAiBuddyPrompt(action) {
     const prompt = buildContextPrompt(action, aiBuddyContext);
     setAiBuddyPrompt(prompt);
@@ -904,7 +926,9 @@ ${project.starterCode.js}`,
         onBuildPrompt={buildAiBuddyPrompt}
         onClose={() => setAiBuddyOpen(false)}
         onCopyPrompt={copyAiBuddyPrompt}
+        onMove={moveAiBuddy}
         onOpen={openAiBuddyPanel}
+        position={isAiBuddyPosition(aiBuddyPosition) ? aiBuddyPosition : DEFAULT_AI_BUDDY_POSITION}
         prompt={aiBuddyPrompt}
       />
 
@@ -914,9 +938,11 @@ ${project.starterCode.js}`,
 }
 
 
-function AiBuddy({ context, copyFeedback, isOpen, onBuildPrompt, onClose, onCopyPrompt, onOpen, prompt }) {
+function AiBuddy({ context, copyFeedback, isOpen, onBuildPrompt, onClose, onCopyPrompt, onMove, onOpen, position, prompt }) {
+  const currentPosition = AI_BUDDY_POSITIONS.find((item) => item.id === position) ?? AI_BUDDY_POSITIONS[0];
+
   return (
-    <aside className="ai-buddy-shell" aria-label="AI Buddy tutor shell">
+    <aside className={`ai-buddy-shell ai-buddy-shell--${currentPosition.id}`} aria-label="AI Buddy tutor shell">
       {isOpen && (
         <div className="ai-buddy-panel" role="dialog" aria-modal="false" aria-labelledby="ai-buddy-title">
           <div className="section-heading compact-heading">
@@ -924,9 +950,12 @@ function AiBuddy({ context, copyFeedback, isOpen, onBuildPrompt, onClose, onCopy
               <p className="eyebrow">AI Buddy</p>
               <h2 id="ai-buddy-title">Tutor prompt shell</h2>
             </div>
-            <button className="icon-button" type="button" onClick={onClose} aria-label="Close AI Buddy">×</button>
+            <div className="ai-buddy-panel-controls">
+              <button className="secondary-button compact-button" type="button" onClick={onMove}>Move</button>
+              <button className="icon-button" type="button" onClick={onClose} aria-label="Close AI Buddy">×</button>
+            </div>
           </div>
-          <p className="ai-buddy-note">This does not send anything automatically. It creates a prompt you can paste into ChatGPT or Codex.</p>
+          <p className="ai-buddy-note">This does not send anything automatically. It creates a prompt you can paste into ChatGPT or Codex. Use Move to keep AI Buddy out of your way on phones, tablets, and laptops.</p>
           <div className="ai-buddy-context">
             <strong>Current context</strong>
             <span>{context.screen}</span>
@@ -949,12 +978,19 @@ function AiBuddy({ context, copyFeedback, isOpen, onBuildPrompt, onClose, onCopy
           {copyFeedback && <p className="celebration compact-celebration" role="status">{copyFeedback}</p>}
         </div>
       )}
-      <button className="ai-buddy-button" type="button" onClick={onOpen} aria-expanded={isOpen}>
+      <div className="ai-buddy-launcher-row">
+        <button className="ai-buddy-move-button" type="button" onClick={onMove} aria-label={`Move AI Buddy from ${currentPosition.label}`}>Move</button>
+        <button className="ai-buddy-button" type="button" onClick={onOpen} aria-expanded={isOpen}>
         <span aria-hidden="true">{'>'}_</span>
         <strong>AI Buddy</strong>
-      </button>
+        </button>
+      </div>
     </aside>
   );
+}
+
+function isAiBuddyPosition(position) {
+  return AI_BUDDY_POSITIONS.some((item) => item.id === position);
 }
 
 function getAiBuddyContext({ activeNavItem, selectedLesson, selectedChallenge, selectedProject, playgroundCode, challengeFeedback, progress, weakSkills }) {
