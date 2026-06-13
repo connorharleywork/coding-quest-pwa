@@ -18,11 +18,11 @@ export const dailyChecklist = [
 ];
 
 export const navItems = [
-  { id: 'home', label: 'Home', icon: '🏠' },
-  { id: 'learn', label: 'Learn', icon: '📘' },
-  { id: 'practice', label: 'Practice', icon: '⚡' },
-  { id: 'review', label: 'Review', icon: '🧠' },
-  { id: 'ai-helper', label: 'AI Help', icon: '🤖' },
-  { id: 'projects', label: 'Projects', icon: '🛠️' },
-  { id: 'profile', label: 'Profile', icon: '🙂' },
+  { id: 'home', label: 'Home', icon: '⌂' },
+  { id: 'learn', label: 'Learn', icon: '§' },
+  { id: 'practice', label: 'Practice', icon: '▶' },
+  { id: 'review', label: 'Review', icon: '↻' },
+  { id: 'ai-helper', label: 'AI Help', icon: 'AI' },
+  { id: 'projects', label: 'Projects', icon: '◧' },
+  { id: 'profile', label: 'Profile', icon: '○' },
 ];
