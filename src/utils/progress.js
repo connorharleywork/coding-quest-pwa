@@ -18,7 +18,9 @@ const starterProgress = {
   weakChallengeSkills: {},
   practiceCompletions: 0,
   aiHelperUses: 0,
+  aiBuddyUses: 0,
   lastAiHelperRewardDate: null,
+  lastAiBuddyRewardDate: null,
   lastGoalDate: null,
   todayDate: null,
   todayChecklist: {},
@@ -100,6 +102,10 @@ function migrateProgress(savedProgress) {
       ? savedProgress.aiHelperUses
       : starterProgress.aiHelperUses,
     lastAiHelperRewardDate: savedProgress.lastAiHelperRewardDate ?? starterProgress.lastAiHelperRewardDate,
+    aiBuddyUses: Number.isFinite(savedProgress.aiBuddyUses)
+      ? savedProgress.aiBuddyUses
+      : starterProgress.aiBuddyUses,
+    lastAiBuddyRewardDate: savedProgress.lastAiBuddyRewardDate ?? starterProgress.lastAiBuddyRewardDate,
   };
 }
 

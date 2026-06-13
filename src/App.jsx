@@ -28,6 +28,7 @@ import {
   setChecklistItemCompletion,
 } from './utils/progress.js';
 import { checkChallengeCode } from './utils/challengeChecker.js';
+import { AI_EVALUATION_TYPES, createMockEvaluation } from './utils/aiEvaluation.js';
 
 const openAppChecklistItem = dailyChecklist.find((item) => item.id === 'open-app');
 const readLessonChecklistItem = dailyChecklist.find((item) => item.id === 'read-lesson');
@@ -85,6 +86,9 @@ function App() {
   const [aiHelperDraft, setAiHelperDraft] = useLocalStorage(AI_HELPER_STORAGE_KEY, emptyAiHelperDraft);
   const [copyFeedback, setCopyFeedback] = useState('');
   const [backupFeedback, setBackupFeedback] = useState('');
+  const [aiBuddyOpen, setAiBuddyOpen] = useState(false);
+  const [aiBuddyPrompt, setAiBuddyPrompt] = useState('');
+  const [aiBuddyCopyFeedback, setAiBuddyCopyFeedback] = useState('');
 
   const level = getLevelFromXp(progress.totalXp);
   const completedChecklistCount = getCompletedChecklistCount(progress, dailyChecklist);
@@ -105,6 +109,18 @@ function App() {
   const dailyReviewIsComplete = dailyReviewCompletedCount >= DAILY_REVIEW_GOAL;
   const todaysReviewCards = getPrioritizedReviewCards(reviewProgress);
   const badges = useMemo(() => getEarnedBadges(progress, dailyGoalIsComplete, completedBeginnerLessonsCount, completedProjectsCount), [dailyGoalIsComplete, progress, completedBeginnerLessonsCount, completedProjectsCount]);
+
+  const aiBuddyContext = useMemo(() => getAiBuddyContext({
+    activeNavItem,
+    selectedLesson,
+    selectedChallenge,
+    selectedProject,
+    playgroundCode,
+    challengeFeedback,
+    progress,
+    weakSkills,
+  }), [activeNavItem, selectedLesson, selectedChallenge, selectedProject, playgroundCode, challengeFeedback, progress, weakSkills]);
+
 
   useEffect(() => {
     saveProgress(progress);
@@ -677,6 +693,51 @@ ${project.starterCode.js}`,
     if (reflectionItem) completeItem(reflectionItem, 'Reflection saved!');
   }
 
+
+  function recordAiBuddyUse() {
+    const today = getDeviceLocalDate();
+
+    setProgress((currentProgress) => {
+      const usageCount = (currentProgress.aiBuddyUses ?? 0) + 1;
+
+      if (currentProgress.lastAiBuddyRewardDate === today) {
+        return {
+          ...currentProgress,
+          aiBuddyUses: usageCount,
+        };
+      }
+
+      setXpFeedback(`AI Buddy used! +${AI_HELPER_XP_REWARD} XP for asking for help today.`);
+      return {
+        ...currentProgress,
+        totalXp: currentProgress.totalXp + AI_HELPER_XP_REWARD,
+        aiBuddyUses: usageCount,
+        lastAiBuddyRewardDate: today,
+      };
+    });
+  }
+
+  function openAiBuddyPanel() {
+    setAiBuddyOpen(true);
+    recordAiBuddyUse();
+  }
+
+  function buildAiBuddyPrompt(action) {
+    const prompt = buildContextPrompt(action, aiBuddyContext);
+    setAiBuddyPrompt(prompt);
+    setAiBuddyCopyFeedback('Prompt ready. Review it, then copy when you are ready.');
+  }
+
+  async function copyAiBuddyPrompt() {
+    try {
+      await navigator.clipboard.writeText(aiBuddyPrompt);
+      setAiBuddyCopyFeedback('Copied! Paste this prompt into ChatGPT or Codex.');
+    } catch (error) {
+      console.warn('CodeQuest could not copy the AI Buddy prompt automatically.', error);
+      setAiBuddyCopyFeedback('Copy did not work automatically. Select the prompt text and copy it manually.');
+    }
+  }
+
   function selectNavItem(navItem) {
     setActiveNavItem(navItem);
     if (navItem !== 'learn') {
@@ -836,11 +897,133 @@ ${project.starterCode.js}`,
         )}
       </main>
 
+      <AiBuddy
+        context={aiBuddyContext}
+        copyFeedback={aiBuddyCopyFeedback}
+        isOpen={aiBuddyOpen}
+        onBuildPrompt={buildAiBuddyPrompt}
+        onClose={() => setAiBuddyOpen(false)}
+        onCopyPrompt={copyAiBuddyPrompt}
+        onOpen={openAiBuddyPanel}
+        prompt={aiBuddyPrompt}
+      />
+
       <BottomNav activeItem={activeNavItem} onSelect={selectNavItem} />
     </div>
   );
 }
 
+
+function AiBuddy({ context, copyFeedback, isOpen, onBuildPrompt, onClose, onCopyPrompt, onOpen, prompt }) {
+  return (
+    <aside className="ai-buddy-shell" aria-label="AI Buddy tutor shell">
+      {isOpen && (
+        <div className="ai-buddy-panel" role="dialog" aria-modal="false" aria-labelledby="ai-buddy-title">
+          <div className="section-heading compact-heading">
+            <div>
+              <p className="eyebrow">AI Buddy</p>
+              <h2 id="ai-buddy-title">Tutor prompt shell</h2>
+            </div>
+            <button className="icon-button" type="button" onClick={onClose} aria-label="Close AI Buddy">×</button>
+          </div>
+          <p className="ai-buddy-note">This does not send anything automatically. It creates a prompt you can paste into ChatGPT or Codex.</p>
+          <div className="ai-buddy-context">
+            <strong>Current context</strong>
+            <span>{context.screen}</span>
+            {context.title && <small>{context.title}</small>}
+            {context.skill && <small>{context.skill}</small>}
+          </div>
+          <div className="ai-buddy-actions" aria-label="Context-aware helper options">
+            {context.actions.map((action) => (
+              <button className="prompt-chip" key={action.id} type="button" onClick={() => onBuildPrompt(action)}>
+                <strong>{action.label}</strong>
+                <small>{action.helper}</small>
+              </button>
+            ))}
+          </div>
+          <label className="generated-prompt ai-buddy-generated">
+            <span>Generated AI Buddy prompt</span>
+            <textarea readOnly value={prompt || 'Choose a helper option to generate a context-aware prompt.'} />
+          </label>
+          <button className="primary-button" disabled={!prompt} type="button" onClick={onCopyPrompt}>Copy Prompt</button>
+          {copyFeedback && <p className="celebration compact-celebration" role="status">{copyFeedback}</p>}
+        </div>
+      )}
+      <button className="ai-buddy-button" type="button" onClick={onOpen} aria-expanded={isOpen}>
+        <span aria-hidden="true">{'>'}_</span>
+        <strong>AI Buddy</strong>
+      </button>
+    </aside>
+  );
+}
+
+function getAiBuddyContext({ activeNavItem, selectedLesson, selectedChallenge, selectedProject, playgroundCode, challengeFeedback, progress, weakSkills }) {
+  const baseActions = [
+    { id: 'explain-screen', label: 'Explain what I should do on this screen', helper: 'Get a beginner-friendly orientation.' },
+    { id: 'hint', label: 'Give me a hint', helper: 'One nudge without the full answer.' },
+    { id: 'beginner-concept', label: 'Explain this concept like I’m a beginner', helper: 'Slow explanation with an example.' },
+    { id: 'practice-task', label: 'Create a practice task for this skill', helper: 'Make one tiny exercise.' },
+    { id: 'next-step', label: 'Tell me what to do next', helper: 'Pick the next safe action.' },
+  ];
+  const context = { screen: 'Home', title: '', skill: '', code: '', feedback: '', actions: baseActions };
+
+  if (activeNavItem === 'learn' && selectedLesson) {
+    return { ...context, screen: 'Lesson detail', title: selectedLesson.title, skill: selectedLesson.tags.join(', '), code: selectedLesson.codeExample ?? '', feedback: selectedLesson.miniTask, actions: [
+      { id: 'explain-lesson', label: 'Explain this lesson', helper: 'Include concept, example, and mini task.' },
+      ...baseActions,
+    ] };
+  }
+  if (activeNavItem === 'learn') return { ...context, screen: 'Learn', title: 'Learn roadmap', skill: 'Beginner web development' };
+  if (activeNavItem === 'practice' && selectedChallenge) {
+    const savedChallenge = progress.challenges?.[selectedChallenge.id] ?? {};
+    const code = savedChallenge.code ?? getChallengeStarterCode(selectedChallenge);
+    const feedback = challengeFeedback ? `Passed: ${challengeFeedback.passed.map((item) => item.label).join('; ') || 'None yet'}\nNeeds work: ${challengeFeedback.needsWork.map((item) => item.label).join('; ') || 'Nothing'}\nNext hint: ${challengeFeedback.nextHint}` : 'Challenge has not been checked yet.';
+    return { ...context, screen: 'Challenge', title: selectedChallenge.title, skill: selectedChallenge.skillTags.join(', '), feedback, code: `HTML:\n${code.html}\n\nCSS:\n${code.css}\n\nJavaScript:\n${code.js}`, actions: [
+      { id: 'challenge-debug', label: 'Help me understand why my challenge is not passing', helper: 'Use checker feedback and my code.' },
+      ...baseActions,
+    ] };
+  }
+  if (activeNavItem === 'practice') {
+    const code = { ...starterPlaygroundCode, ...playgroundCode };
+    return { ...context, screen: 'Practice', title: 'Code Playground', skill: 'HTML, CSS, JavaScript', code: `HTML:\n${code.html}\n\nCSS:\n${code.css}\n\nJavaScript:\n${code.js}`, actions: [
+      { id: 'debug-playground', label: 'Help me debug my playground code', helper: 'Include current HTML/CSS/JS.' },
+      ...baseActions,
+    ] };
+  }
+  if (activeNavItem === 'projects' && selectedProject) return { ...context, screen: 'Project', title: selectedProject.title, skill: selectedProject.goal, code: JSON.stringify(selectedProject.starterCode, null, 2), actions: [
+    { id: 'project-step', label: 'Explain this project step', helper: 'Break down the guided project.' },
+    ...baseActions,
+  ] };
+  if (activeNavItem === 'projects') return { ...context, screen: 'Project', title: 'Projects list', skill: 'Guided beginner builds' };
+  if (activeNavItem === 'review') return { ...context, screen: 'Review', title: 'Review cards', skill: weakSkills[0]?.name ?? 'Beginner concepts' };
+  if (activeNavItem === 'profile') return { ...context, screen: 'Profile', title: 'Progress and backup', skill: `${progress.totalXp} XP, ${progress.streak} day streak` };
+  if (activeNavItem === 'ai-helper') return { ...context, screen: 'AI Helper', title: 'Copyable coding prompts', skill: 'Prompt writing' };
+  return context;
+}
+
+function buildContextPrompt(action, context) {
+  const mockEvaluation = createMockEvaluation({
+    type: action.id.includes('challenge') ? AI_EVALUATION_TYPES.challengeCode : AI_EVALUATION_TYPES.projectQuestion,
+    screen: context.screen,
+    title: context.title,
+    skill: context.skill,
+    code: context.code,
+    feedback: context.feedback,
+  });
+
+  return [
+    'You are AI Buddy, a patient beginner coding tutor for CodeQuest.',
+    `User request: ${action.label}`,
+    `Current screen: ${context.screen}`,
+    context.title ? `Current title: ${context.title}` : '',
+    context.skill ? `Skill/topic: ${context.skill}` : '',
+    context.feedback ? `Current feedback or task:\n${context.feedback}` : '',
+    context.code ? `Current code/context:\n${context.code}` : '',
+    'Please answer with: what I should do, one hint, one beginner explanation, and one tiny next step. If code is included, point to the likely issue before showing any full solution.',
+    'Local AI-ready evaluation template for future backend use:',
+    mockEvaluation.prompt,
+  ].filter(Boolean).join('\n\n');
+}
 
 
 function ProfileScreen({ badges, backupFeedback, completedBeginnerLessonsCount, completedChecklistCount, completedProjectsCount, completedChallengesCount, dailyReviewCompletedCount, level, onExportProgress, onImportProgress, progress, weakSkills }) {
@@ -862,10 +1045,12 @@ function ProfileScreen({ badges, backupFeedback, completedBeginnerLessonsCount, 
         <ProfileRow label="Completed challenges" value={`${completedChallengesCount}/${beginnerChallenges.length}`} />
         <ProfileRow label="Practice completions" value={progress.practiceCompletions ?? 0} />
         <ProfileRow label="AI Helper uses" value={progress.aiHelperUses ?? 0} />
+        <ProfileRow label="AI Buddy uses" value={progress.aiBuddyUses ?? 0} />
         <ProfileRow label="Review cards completed" value={progress.review?.totalCompleted ?? 0} />
         <ProfileRow label="Weak skills count" value={weakSkills.length} />
         <ProfileRow label="Daily review progress" value={`${dailyReviewCompletedCount}/${DAILY_REVIEW_GOAL} cards`} />
         <ProfileRow label="AI Helper XP today" value={progress.lastAiHelperRewardDate === getDeviceLocalDate() ? 'Collected' : `+${AI_HELPER_XP_REWARD} available`} />
+        <ProfileRow label="AI Buddy XP today" value={progress.lastAiBuddyRewardDate === getDeviceLocalDate() ? 'Collected' : `+${AI_HELPER_XP_REWARD} available`} />
         <ProfileRow label="Badges earned" value={badges.length ? badges.join(', ') : 'None yet'} />
         <ProfileRow label="Today’s checklist" value={`${completedChecklistCount}/${dailyChecklist.length} done`} />
       </div>
@@ -1356,7 +1541,7 @@ function ChallengeDetail({ challenge, challengeFeedback, challengeProgress = {},
         </div>
       </div>
 
-      {challengeFeedback && <ChallengeFeedback feedback={challengeFeedback} explanation={challenge.explanation} />}
+      {challengeFeedback && <ChallengeFeedback feedback={challengeFeedback} explanation={challenge.explanation} onAskAiHelp={() => onAskAiHelp(challenge, 'not-passing')} />}
 
       <details className="hint-card playground-hints">
         <summary>Need a hint?</summary>
@@ -1397,7 +1582,7 @@ function ChallengeDetail({ challenge, challengeFeedback, challengeProgress = {},
   );
 }
 
-function ChallengeFeedback({ feedback, explanation }) {
+function ChallengeFeedback({ feedback, explanation, onAskAiHelp }) {
   return (
     <aside className={feedback.allPassed ? 'challenge-feedback passed' : 'challenge-feedback'} role="status">
       <strong>{feedback.allPassed ? 'All checks passed! Great work.' : 'Nice try — here is what to improve next.'}</strong>
@@ -1413,6 +1598,7 @@ function ChallengeFeedback({ feedback, explanation }) {
       </div>
       <p><strong>Next hint:</strong> {feedback.nextHint}</p>
       {feedback.allPassed && <p>{explanation}</p>}
+      {!feedback.allPassed && onAskAiHelp && <button className="secondary-button" type="button" onClick={onAskAiHelp}>Ask AI Buddy for help</button>}
     </aside>
   );
 }
@@ -1879,9 +2065,17 @@ function LessonScreen({ lesson, completedLessonIds, onAskAiHelp, onBack, onCompl
   function checkActivity() {
     const result = validateLessonActivity(activity, activityAnswer);
     setHasPassedActivity(result.passed);
+    const mockEvaluation = createMockEvaluation({
+      type: AI_EVALUATION_TYPES.lessonAnswer,
+      screen: 'Lesson detail',
+      title: lesson.title,
+      skill: lesson.tags.join(', '),
+      question: activity.prompt,
+      answer: activityAnswer,
+    });
     setActivityFeedback(result.passed
-      ? 'Nice work — that shows you used the concept. You can complete the lesson now!'
-      : 'Good try. Use the hint or reveal the example, then try again.');
+      ? `What was correct: your answer matched the activity goal. Still needs work: nothing required for this check. Next hint: ${mockEvaluation.nextHint}`
+      : `What was correct: you made an attempt and can compare it with the lesson concept. Still needs work: match the expected idea more closely. Next hint: ${lesson.hint}`);
   }
 
   function revealAnswer() {
@@ -1947,6 +2141,9 @@ function LessonScreen({ lesson, completedLessonIds, onAskAiHelp, onBack, onCompl
           <p>{lesson.hint}</p>
         </details>
         {activityFeedback && <p className={`activity-feedback ${hasPassedActivity ? 'passed' : 'needs-work'}`} role="status">{activityFeedback}</p>}
+        {!hasPassedActivity && activityFeedback && (
+          <button className="secondary-button" type="button" onClick={() => onAskAiHelp(lesson)}>Ask AI Buddy for help</button>
+        )}
         <div className="lesson-actions compact-actions">
           <button className="secondary-button" type="button" onClick={checkActivity}>Check my answer</button>
           <button className="secondary-button" type="button" onClick={revealAnswer}>Reveal example</button>
