@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { BottomNav } from './components/BottomNav.jsx';
 import { StatCard } from './components/StatCard.jsx';
 import { useLocalStorage } from './hooks/useLocalStorage.js';
@@ -43,6 +43,7 @@ const AI_BUDDY_POSITIONS = [
   { id: 'top-left', label: 'Top left' },
 ];
 const DEFAULT_AI_BUDDY_POSITION = 'bottom-right';
+const AI_BUDDY_DRAG_MARGIN = 12;
 const BACKUP_SCHEMA_VERSION = 1;
 const starterPlaygroundCode = {
   html: `<section class="mini-page">
@@ -274,7 +275,7 @@ function App() {
       progress,
       playgroundCode,
       aiHelperDraft,
-      aiBuddyPosition: isAiBuddyPosition(aiBuddyPosition) ? aiBuddyPosition : DEFAULT_AI_BUDDY_POSITION,
+      aiBuddyPosition: normalizeAiBuddyPosition(aiBuddyPosition),
     };
     const backupBlob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
     const backupUrl = URL.createObjectURL(backupBlob);
@@ -311,7 +312,7 @@ function App() {
         setAiHelperDraft({ ...emptyAiHelperDraft, ...backup.aiHelperDraft });
       }
 
-      if (isAiBuddyPosition(backup.aiBuddyPosition)) {
+      if (isAiBuddyPosition(backup.aiBuddyPosition) || isAiBuddyCoordinatePosition(backup.aiBuddyPosition)) {
         setAiBuddyPosition(backup.aiBuddyPosition);
       }
 
@@ -928,7 +929,8 @@ ${project.starterCode.js}`,
         onCopyPrompt={copyAiBuddyPrompt}
         onMove={moveAiBuddy}
         onOpen={openAiBuddyPanel}
-        position={isAiBuddyPosition(aiBuddyPosition) ? aiBuddyPosition : DEFAULT_AI_BUDDY_POSITION}
+        onPositionChange={setAiBuddyPosition}
+        position={normalizeAiBuddyPosition(aiBuddyPosition)}
         prompt={aiBuddyPrompt}
       />
 
@@ -938,11 +940,92 @@ ${project.starterCode.js}`,
 }
 
 
-function AiBuddy({ context, copyFeedback, isOpen, onBuildPrompt, onClose, onCopyPrompt, onMove, onOpen, position, prompt }) {
-  const currentPosition = AI_BUDDY_POSITIONS.find((item) => item.id === position) ?? AI_BUDDY_POSITIONS[0];
+function AiBuddy({ context, copyFeedback, isOpen, onBuildPrompt, onClose, onCopyPrompt, onMove, onOpen, onPositionChange, position, prompt }) {
+  const shellRef = useRef(null);
+  const dragStateRef = useRef(null);
+  const ignoreNextClickRef = useRef(false);
+  const currentPosition = isAiBuddyPosition(position)
+    ? (AI_BUDDY_POSITIONS.find((item) => item.id === position) ?? AI_BUDDY_POSITIONS[0])
+    : AI_BUDDY_POSITIONS[0];
+  const isCustomPosition = isAiBuddyCoordinatePosition(position);
+  const customPositionStyle = isCustomPosition ? { left: `${position.x}px`, top: `${position.y}px` } : undefined;
+
+  useEffect(() => {
+    if (!isCustomPosition) return undefined;
+
+    function keepAiBuddyInViewport() {
+      const nextPosition = clampAiBuddyPosition(position.x, position.y, shellRef.current);
+      if (nextPosition.x !== position.x || nextPosition.y !== position.y) {
+        onPositionChange(nextPosition);
+      }
+    }
+
+    window.addEventListener('resize', keepAiBuddyInViewport);
+    keepAiBuddyInViewport();
+
+    return () => window.removeEventListener('resize', keepAiBuddyInViewport);
+  }, [isCustomPosition, onPositionChange, position]);
+
+  function handleDragStart(event) {
+    if (event.button !== 0) return;
+
+    const shellBounds = shellRef.current?.getBoundingClientRect();
+    if (!shellBounds) return;
+
+    dragStateRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      offsetX: event.clientX - shellBounds.left,
+      offsetY: event.clientY - shellBounds.top,
+      didDrag: false,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function handleDragMove(event) {
+    const dragState = dragStateRef.current;
+    if (!dragState || dragState.pointerId !== event.pointerId) return;
+
+    const distanceMoved = Math.hypot(event.clientX - dragState.startX, event.clientY - dragState.startY);
+    if (distanceMoved > 4) {
+      dragState.didDrag = true;
+    }
+
+    if (!dragState.didDrag) return;
+
+    event.preventDefault();
+    onPositionChange(clampAiBuddyPosition(event.clientX - dragState.offsetX, event.clientY - dragState.offsetY, shellRef.current));
+  }
+
+  function handleDragEnd(event) {
+    const dragState = dragStateRef.current;
+    if (!dragState || dragState.pointerId !== event.pointerId) return;
+
+    if (dragState.didDrag) {
+      ignoreNextClickRef.current = true;
+      onPositionChange(clampAiBuddyPosition(event.clientX - dragState.offsetX, event.clientY - dragState.offsetY, shellRef.current));
+    }
+
+    dragStateRef.current = null;
+  }
+
+  function handleLauncherClick() {
+    if (ignoreNextClickRef.current) {
+      ignoreNextClickRef.current = false;
+      return;
+    }
+
+    onOpen();
+  }
 
   return (
-    <aside className={`ai-buddy-shell ai-buddy-shell--${currentPosition.id}`} aria-label="AI Buddy tutor shell">
+    <aside
+      className={`ai-buddy-shell ${isCustomPosition ? 'ai-buddy-shell--custom' : `ai-buddy-shell--${currentPosition.id}`}`}
+      ref={shellRef}
+      style={customPositionStyle}
+      aria-label="AI Buddy tutor shell"
+    >
       {isOpen && (
         <div className="ai-buddy-panel" role="dialog" aria-modal="false" aria-labelledby="ai-buddy-title">
           <div className="section-heading compact-heading">
@@ -980,9 +1063,19 @@ function AiBuddy({ context, copyFeedback, isOpen, onBuildPrompt, onClose, onCopy
       )}
       <div className="ai-buddy-launcher-row">
         <button className="ai-buddy-move-button" type="button" onClick={onMove} aria-label={`Move AI Buddy from ${currentPosition.label}`}>Move</button>
-        <button className="ai-buddy-button" type="button" onClick={onOpen} aria-expanded={isOpen}>
-        <span aria-hidden="true">{'>'}_</span>
-        <strong>AI Buddy</strong>
+        <button
+          className="ai-buddy-button"
+          type="button"
+          onClick={handleLauncherClick}
+          onPointerDown={handleDragStart}
+          onPointerMove={handleDragMove}
+          onPointerUp={handleDragEnd}
+          onPointerCancel={handleDragEnd}
+          aria-expanded={isOpen}
+          aria-label="Open AI Buddy. Hold and drag to move it."
+        >
+          <span aria-hidden="true">{'>'}_</span>
+          <strong>AI Buddy</strong>
         </button>
       </div>
     </aside>
@@ -991,6 +1084,35 @@ function AiBuddy({ context, copyFeedback, isOpen, onBuildPrompt, onClose, onCopy
 
 function isAiBuddyPosition(position) {
   return AI_BUDDY_POSITIONS.some((item) => item.id === position);
+}
+
+function isAiBuddyCoordinatePosition(position) {
+  return Boolean(
+    position
+    && typeof position === 'object'
+    && Number.isFinite(position.x)
+    && Number.isFinite(position.y)
+  );
+}
+
+function normalizeAiBuddyPosition(position) {
+  if (isAiBuddyPosition(position) || isAiBuddyCoordinatePosition(position)) {
+    return position;
+  }
+
+  return DEFAULT_AI_BUDDY_POSITION;
+}
+
+function clampAiBuddyPosition(x, y, element) {
+  const width = element?.offsetWidth ?? 180;
+  const height = element?.offsetHeight ?? 64;
+  const maxX = Math.max(AI_BUDDY_DRAG_MARGIN, window.innerWidth - width - AI_BUDDY_DRAG_MARGIN);
+  const maxY = Math.max(AI_BUDDY_DRAG_MARGIN, window.innerHeight - height - AI_BUDDY_DRAG_MARGIN);
+
+  return {
+    x: Math.min(Math.max(AI_BUDDY_DRAG_MARGIN, Math.round(x)), maxX),
+    y: Math.min(Math.max(AI_BUDDY_DRAG_MARGIN, Math.round(y)), maxY),
+  };
 }
 
 function getAiBuddyContext({ activeNavItem, selectedLesson, selectedChallenge, selectedProject, playgroundCode, challengeFeedback, progress, weakSkills }) {
